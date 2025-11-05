@@ -1,0 +1,6 @@
+# CONTRIBUTING
+
+...
+docker run -dp 5007:5000 -w /app "$(pwd):/app" flask-smorest-api:latest
+ sh -c "flask run --host 0.0.0.0 " 
+...
