@@ -15,5 +15,5 @@ COPY . .
 
 
 # Run the Flask app
-CMD ["/bin/bash","docker-entrypoint.sh"]
+CMD ["flask", "run", "--host", "0.0.0.0"]
 
