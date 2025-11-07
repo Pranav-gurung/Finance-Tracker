@@ -4,6 +4,7 @@ import os
 import secrets
 from db import db
 import models
+from dotenv import load_dotenv
 from blocklist import BLOCKLIST
 from flask_jwt_extended import JWTManager
 from flask import jsonify
@@ -14,7 +15,7 @@ from resources.tag import blp as TagBlueprint
 from resources.user import blp as UserBlueprint
 def create_app(db_url=None):
     app = Flask(__name__)
-
+    load_dotenv()
     # --- Config ---
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Category REST API"
