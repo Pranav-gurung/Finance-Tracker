@@ -27,7 +27,7 @@ let mode = "login"; // login or register
 let accessToken = "";
 
 // Backend URL
-const baseUrl = "http://localhost:5000"; // Docker backend port
+const baseUrl = "https://finance-tracker-project-m83z.onrender.com"; // Docker backend port
 
 // ----------------------
 // Landing button events
