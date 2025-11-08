@@ -13,9 +13,11 @@ from resources.expense import blp as ExpenseBlueprint
 from resources.category import blp as CategoryBlueprint
 from resources.tag import blp as TagBlueprint
 from resources.user import blp as UserBlueprint
+from flask_cors import CORS
 def create_app(db_url=None):
     app = Flask(__name__)
     load_dotenv()
+    CORS(app)
     # --- Config ---
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Category REST API"
