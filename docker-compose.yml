@@ -1,0 +1,26 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    env_file:
+      - ./.env
+
+  db:
+    image: postgres:18
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=myapp
+    ports:
+    - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql   # <- changed mount point
+
+volumes:
+  postgres_data:
+
+
