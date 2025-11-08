@@ -17,7 +17,7 @@ from flask_cors import CORS
 def create_app(db_url=None):
     app = Flask(__name__)
     load_dotenv()
-    CORS(app, origins="https://finance-tracker-frontend.netlify.app")
+    CORS(app, origins=["https://project-202.netlify.app"])
     # --- Config ---
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Category REST API"
