@@ -1,6 +1,4 @@
-// ----------------------
 // Sections
-// ----------------------
 const landing = document.getElementById("landing");
 const authSection = document.getElementById("auth-section");
 const dashboard = document.getElementById("dashboard");
@@ -22,37 +20,44 @@ const categoriesList = document.getElementById("categories-list");
 const tagsList = document.getElementById("tags-list");
 const expensesList = document.getElementById("expenses-list");
 
+// Add new inputs
+const addCategoryBtn = document.getElementById("add-category-btn");
+const addTagBtn = document.getElementById("add-tag-btn");
+const addExpenseBtn = document.getElementById("add-expense-btn");
+
+// Tag inputs
+const newCategoryInput = document.getElementById("new-category");
+const newTagInput = document.getElementById("new-tag");
+const tagCategoryIdInput = document.getElementById("tag-category-id");
+
+// Expense inputs
+const newExpenseNameInput = document.getElementById("new-expense-name");
+const newExpensePriceInput = document.getElementById("new-expense-price");
+
 // State
-let mode = "login"; // login or register
+let mode = "login";
 let accessToken = "";
 
-// Backend URL
-const baseUrl = "https://finance-tracker-project-m83z.onrender.com";
+// Backend URL (same domain)
+const baseUrl = "";
 
-// ----------------------
-// Landing button events
-// ----------------------
+// Landing buttons
 newUserBtn.addEventListener("click", () => {
     mode = "register";
     showAuth("Register", "Get Started");
 });
-
 oldUserBtn.addEventListener("click", () => {
     mode = "login";
     showAuth("Login", "Login");
 });
 
-// ----------------------
 // Back button
-// ----------------------
 backBtn.addEventListener("click", () => {
     authSection.classList.add("hidden");
     landing.classList.remove("hidden");
 });
 
-// ----------------------
-// Show Auth section
-// ----------------------
+// Show Auth
 function showAuth(title, buttonText) {
     landing.classList.add("hidden");
     authSection.classList.remove("hidden");
@@ -61,23 +66,20 @@ function showAuth(title, buttonText) {
     authMessage.textContent = "";
 }
 
-// ----------------------
-// Handle auth submission
-// ----------------------
+// Auth submit
 authForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    const url = mode === "login" ? `${baseUrl}/login` : `${baseUrl}/register`;
+    const url = mode === "login" ? "/login" : "/register";
 
     try {
         const res = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({username, password}),
         });
-
         const data = await res.json();
 
         if (!res.ok) {
@@ -89,7 +91,6 @@ authForm.addEventListener("submit", async (e) => {
             dashboard.classList.remove("hidden");
             userNameSpan.textContent = username;
 
-            // Load dashboard data
             fetchDashboardData();
         }
     } catch (err) {
@@ -98,103 +99,76 @@ authForm.addEventListener("submit", async (e) => {
     }
 });
 
-// ----------------------
 // Fetch dashboard data
-// ----------------------
 async function fetchDashboardData() {
-    // Categories
-    try {
-        const res = await fetch(`${baseUrl}/category`, {
-            headers: { "Authorization": `Bearer ${accessToken}` },
-        });
-        const categories = await res.json();
-        categoriesList.innerHTML = categories.map(cat => `<li>${cat.name}</li>`).join("");
-    } catch (err) {
-        console.error("Error fetching categories:", err);
-    }
+    await fetchData("/category", categoriesList);
+    await fetchData("/tag", tagsList);
+    await fetchData("/expense", expensesList, true);
+}
 
-    // Tags
+async function fetchData(endpoint, container, isExpense = false) {
     try {
-        const res = await fetch(`${baseUrl}/tag`, {
-            headers: { "Authorization": `Bearer ${accessToken}` },
+        const res = await fetch(endpoint, {
+            headers: { ...(accessToken && {"Authorization": `Bearer ${accessToken}`}) },
         });
-        const tags = await res.json();
-        tagsList.innerHTML = tags.map(tag => `<li>${tag.name}</li>`).join("");
+        const items = await res.json();
+        container.innerHTML = items
+            .map(item => isExpense ? `<li>${item.name} - $${item.price}</li>` : `<li>${item.name}</li>`)
+            .join("");
     } catch (err) {
-        console.error("Error fetching tags:", err);
-    }
-
-    // Expenses
-    try {
-        const res = await fetch(`${baseUrl}/expense`, {
-            headers: { "Authorization": `Bearer ${accessToken}` },
-        });
-        const expenses = await res.json();
-        expensesList.innerHTML = expenses.map(exp => `<li>${exp.name} - $${exp.price}</li>`).join("");
-    } catch (err) {
-        console.error("Error fetching expenses:", err);
+        console.error(`Error fetching ${endpoint}:`, err);
     }
 }
 
-// ----------------------
-// Optional: Add new category
-// ----------------------
-async function addCategory(name) {
-    try {
-        const res = await fetch(`${baseUrl}/category`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ name }),
-        });
-        const data = await res.json();
-        fetchDashboardData();
-        return data;
-    } catch (err) {
-        console.error("Error adding category:", err);
-    }
-}
+// Add category
+addCategoryBtn.addEventListener("click", async () => {
+    const name = newCategoryInput.value.trim();
+    if (!name) return alert("Enter category name");
+    await fetch("/category", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({name}),
+    });
+    newCategoryInput.value = "";
+    fetchDashboardData();
+});
 
-// ----------------------
-// Optional: Add new tag
-// ----------------------
-async function addTag(category_id, name) {
-    try {
-        const res = await fetch(`${baseUrl}/category/${category_id}/tag`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ name }),
-        });
-        const data = await res.json();
-        fetchDashboardData();
-        return data;
-    } catch (err) {
-        console.error("Error adding tag:", err);
-    }
-}
+// Add tag
+addTagBtn.addEventListener("click", async () => {
+    const name = newTagInput.value.trim();
+    const category_id = tagCategoryIdInput.value.trim();
+    if (!name || !category_id) return alert("Enter tag name and category id");
+    await fetch(`/category/${category_id}/tag`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({name}),
+    });
+    newTagInput.value = "";
+    tagCategoryIdInput.value = "";
+    fetchDashboardData();
+});
 
-// ----------------------
-// Optional: Add new expense
-// ----------------------
-async function addExpense(name, price) {
-    try {
-        const res = await fetch(`${baseUrl}/expense`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ name, price }),
-        });
-        const data = await res.json();
-        fetchDashboardData();
-        return data;
-    } catch (err) {
-        console.error("Error adding expense:", err);
-    }
-}
+// Add expense
+addExpenseBtn.addEventListener("click", async () => {
+    const name = newExpenseNameInput.value.trim();
+    const price = parseFloat(newExpensePriceInput.value);
+    if (!name || isNaN(price)) return alert("Enter expense name and price");
+    await fetch("/expense", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({name, price}),
+    });
+    newExpenseNameInput.value = "";
+    newExpensePriceInput.value = "";
+    fetchDashboardData();
+});
+

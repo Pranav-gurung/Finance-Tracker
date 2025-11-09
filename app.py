@@ -17,7 +17,20 @@ from flask_cors import CORS
 def create_app(db_url=None):
     app = Flask(__name__)
     load_dotenv()
-    CORS(app, origins=["https://project-202.netlify.app"])
+    app = Flask(__name__, static_folder="FRONTEND", static_url_path="")
+
+    # Serve frontend
+    @app.route("/")
+    def serve_frontend():
+        return app.send_static_file("index.html")
+
+    @app.route("/<path:path>")
+    def serve_static(path):
+        return app.send_static_file(path)
+
+    # --- Your existing configs ---
+    CORS(app)  # Optional, but now frontend is served by same domain
+
     # --- Config ---
     app.config["PROPAGATE_EXCEPTIONS"] = True
     app.config["API_TITLE"] = "Category REST API"

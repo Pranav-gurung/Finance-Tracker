@@ -6,49 +6,55 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Landing Section -->
+    <!-- Landing Page -->
     <section id="landing">
-        <h1>💰 Finance Tracker 💰</h1>
-        <p class="quote">"Save today, secure tomorrow."</p>
-        <div class="buttons">
-            <button id="new-user-btn">Get Started</button>
-            <button id="old-user-btn">Login</button>
-        </div>
+        <h1>"Save Money, Save Future"</h1>
+        <button id="new-user-btn">Get Started</button>
+        <button id="old-user-btn">Login</button>
     </section>
 
     <!-- Auth Section -->
     <section id="auth-section" class="hidden">
-        <h2 id="auth-title">Login / Register</h2>
+        <h2 id="auth-title">Login/Register</h2>
         <form id="auth-form">
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
             <button type="submit" id="auth-submit">Submit</button>
         </form>
-        <p id="auth-message" class="error"></p>
-        <button id="back-btn" class="back">Back</button>
+        <p id="auth-message"></p>
+        <button id="back-btn">Back</button>
     </section>
 
-    <!-- Dashboard Section -->
+    <!-- Dashboard -->
     <section id="dashboard" class="hidden">
-        <h2>Welcome, <span id="user-name"></span>!</h2>
+        <h2>Welcome, <span id="user-name"></span></h2>
 
         <div class="dashboard-section">
             <h3>Categories</h3>
             <ul id="categories-list"></ul>
+            <input type="text" id="new-category" placeholder="New Category">
+            <button id="add-category-btn">Add Category</button>
         </div>
 
         <div class="dashboard-section">
             <h3>Tags</h3>
             <ul id="tags-list"></ul>
+            <input type="text" id="new-tag" placeholder="New Tag">
+            <input type="text" id="tag-category-id" placeholder="Category ID">
+            <button id="add-tag-btn">Add Tag</button>
         </div>
 
         <div class="dashboard-section">
             <h3>Expenses</h3>
             <ul id="expenses-list"></ul>
+            <input type="text" id="new-expense-name" placeholder="Expense Name">
+            <input type="number" id="new-expense-price" placeholder="Price">
+            <button id="add-expense-btn">Add Expense</button>
         </div>
     </section>
 
-    <script src="app.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
+
 
