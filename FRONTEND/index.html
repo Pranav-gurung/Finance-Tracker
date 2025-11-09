@@ -2,59 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Tracker</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .hidden { display: none; }
+        h1, h2 { color: #333; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 5px; margin: 5px; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #fff; padding: 8px; margin: 4px 0; border-radius: 4px; }
+        .section { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+    </style>
 </head>
 <body>
-    <!-- Landing Page -->
-    <section id="landing">
-        <h1>"Save Money, Save Future"</h1>
+
+    <!-- Landing -->
+    <div id="landing" class="section">
+        <h1>💰 Save Your Money</h1>
+        <p>"Do not save what is left after spending, but spend what is left after saving." — Warren Buffett</p>
         <button id="new-user-btn">Get Started</button>
         <button id="old-user-btn">Login</button>
-    </section>
+    </div>
 
     <!-- Auth Section -->
-    <section id="auth-section" class="hidden">
-        <h2 id="auth-title">Login/Register</h2>
+    <div id="auth-section" class="section hidden">
+        <h2 id="auth-title"></h2>
         <form id="auth-form">
             <input type="text" id="username" placeholder="Username" required>
             <input type="password" id="password" placeholder="Password" required>
-            <button type="submit" id="auth-submit">Submit</button>
+            <button type="submit" id="auth-submit"></button>
         </form>
-        <p id="auth-message"></p>
+        <p id="auth-message" style="color:red;"></p>
         <button id="back-btn">Back</button>
-    </section>
+    </div>
 
     <!-- Dashboard -->
-    <section id="dashboard" class="hidden">
-        <h2>Welcome, <span id="user-name"></span></h2>
+    <div id="dashboard" class="section hidden">
+        <h2>Welcome, <span id="user-name"></span>!</h2>
 
-        <div class="dashboard-section">
+        <!-- Add Category -->
+        <div>
             <h3>Categories</h3>
+            <input type="text" id="new-category-name" placeholder="New category name">
+            <button onclick="handleAddCategory()">Add Category</button>
             <ul id="categories-list"></ul>
-            <input type="text" id="new-category" placeholder="New Category">
-            <button id="add-category-btn">Add Category</button>
         </div>
 
-        <div class="dashboard-section">
+        <!-- Add Tag -->
+        <div>
             <h3>Tags</h3>
+            <input type="text" id="tag-name" placeholder="New tag name">
+            <input type="text" id="tag-category-id" placeholder="Category ID for tag">
+            <button onclick="handleAddTag()">Add Tag</button>
             <ul id="tags-list"></ul>
-            <input type="text" id="new-tag" placeholder="New Tag">
-            <input type="text" id="tag-category-id" placeholder="Category ID">
-            <button id="add-tag-btn">Add Tag</button>
         </div>
 
-        <div class="dashboard-section">
+        <!-- Add Expense -->
+        <div>
             <h3>Expenses</h3>
+            <input type="text" id="expense-name" placeholder="Expense name">
+            <input type="number" id="expense-price" placeholder="Price">
+            <button onclick="handleAddExpense()">Add Expense</button>
             <ul id="expenses-list"></ul>
-            <input type="text" id="new-expense-name" placeholder="Expense Name">
-            <input type="number" id="new-expense-price" placeholder="Price">
-            <button id="add-expense-btn">Add Expense</button>
         </div>
-    </section>
+    </div>
 
     <script src="script.js"></script>
+    <script>
+        // Wrappers for JS functions
+        function handleAddCategory() {
+            const name = document.getElementById("new-category-name").value;
+            if(name) addCategory(name);
+            document.getElementById("new-category-name").value = '';
+        }
+
+        function handleAddTag() {
+            const name = document.getElementById("tag-name").value;
+            const category_id = document.getElementById("tag-category-id").value;
+            if(name && category_id) addTag(category_id, name);
+            document.getElementById("tag-name").value = '';
+            document.getElementById("tag-category-id").value = '';
+        }
+
+        function handleAddExpense() {
+            const name = document.getElementById("expense-name").value;
+            const price = parseFloat(document.getElementById("expense-price").value);
+            if(name && !isNaN(price)) addExpense(name, price);
+            document.getElementById("expense-name").value = '';
+            document.getElementById("expense-price").value = '';
+        }
+    </script>
 </body>
 </html>
+
 
 

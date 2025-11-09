@@ -38,8 +38,8 @@ const newExpensePriceInput = document.getElementById("new-expense-price");
 let mode = "login";
 let accessToken = "";
 
-// Backend URL (same domain)
-const baseUrl = "";
+// Backend URL (your Render backend)
+const baseUrl = "https://finance-tracker-project-m83z.onrender.com";
 
 // Landing buttons
 newUserBtn.addEventListener("click", () => {
@@ -72,7 +72,7 @@ authForm.addEventListener("submit", async (e) => {
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    const url = mode === "login" ? "/login" : "/register";
+    const url = mode === "login" ? `${baseUrl}/login` : `${baseUrl}/register`;
 
     try {
         const res = await fetch(url, {
@@ -101,22 +101,22 @@ authForm.addEventListener("submit", async (e) => {
 
 // Fetch dashboard data
 async function fetchDashboardData() {
-    await fetchData("/category", categoriesList);
-    await fetchData("/tag", tagsList);
-    await fetchData("/expense", expensesList, true);
+    await fetchData(`${baseUrl}/category`, categoriesList);
+    await fetchData(`${baseUrl}/tag`, tagsList);
+    await fetchData(`${baseUrl}/expense`, expensesList, true);
 }
 
-async function fetchData(endpoint, container, isExpense = false) {
+async function fetchData(url, container, isExpense = false) {
     try {
-        const res = await fetch(endpoint, {
-            headers: { ...(accessToken && {"Authorization": `Bearer ${accessToken}`}) },
+        const res = await fetch(url, {
+            headers: accessToken ? { "Authorization": `Bearer ${accessToken}` } : {},
         });
         const items = await res.json();
         container.innerHTML = items
             .map(item => isExpense ? `<li>${item.name} - $${item.price}</li>` : `<li>${item.name}</li>`)
             .join("");
     } catch (err) {
-        console.error(`Error fetching ${endpoint}:`, err);
+        console.error(`Error fetching ${url}:`, err);
     }
 }
 
@@ -124,7 +124,7 @@ async function fetchData(endpoint, container, isExpense = false) {
 addCategoryBtn.addEventListener("click", async () => {
     const name = newCategoryInput.value.trim();
     if (!name) return alert("Enter category name");
-    await fetch("/category", {
+    await fetch(`${baseUrl}/category`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -141,7 +141,7 @@ addTagBtn.addEventListener("click", async () => {
     const name = newTagInput.value.trim();
     const category_id = tagCategoryIdInput.value.trim();
     if (!name || !category_id) return alert("Enter tag name and category id");
-    await fetch(`/category/${category_id}/tag`, {
+    await fetch(`${baseUrl}/category/${category_id}/tag`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -159,7 +159,7 @@ addExpenseBtn.addEventListener("click", async () => {
     const name = newExpenseNameInput.value.trim();
     const price = parseFloat(newExpensePriceInput.value);
     if (!name || isNaN(price)) return alert("Enter expense name and price");
-    await fetch("/expense", {
+    await fetch(`${baseUrl}/expense`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
