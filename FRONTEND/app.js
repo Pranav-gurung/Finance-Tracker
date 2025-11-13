@@ -179,31 +179,15 @@ async function loadExpenses() {
 
 async function loadCategories() {
     try {
-        console.log('Fetching categories with accessToken:', accessToken);
-
         const response = await fetch(`${API_BASE_URL}/category`, {
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
             },
         });
-
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error('Failed to load categories: ' + errorText);
-        }
-
-        const data = await response.json();
-        console.log('Raw categories from backend:', data);
-
-        // Map to ensure we only have id and name fields
-        categories = data.map(cat => ({
-            id: cat.id,
-            name: cat.name
-        }));
-
-        console.log('Processed categories:', categories);
-
+        
+        if (!response.ok) throw new Error('Failed to load categories');
+        
+        categories = await response.json();
         renderCategories();
         updateCategorySelects();
     } catch (error) {
@@ -212,7 +196,6 @@ async function loadCategories() {
         renderCategories();
     }
 }
-
 
 async function loadAllTags() {
     allTags = {};
