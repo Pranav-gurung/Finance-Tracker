@@ -1,16 +1,11 @@
-// Configuration - Replace with your actual API URL
-const API_BASE_URL = 'https://finance-tracker-project-m83z.onrender.com';
+const API_BASE_URL = 'http://127.0.0.1:5000';
+
 // State Management
 let accessToken = null;
 let refreshToken = null;
 let expenses = [];
 let categories = [];
 let allTags = {}; // Organized by category
-let summaryData = null;
-
-// Chart instances
-let categoryPieChart = null;
-let incomeExpenseChart = null;
 
 // DOM Elements
 const authSection = document.getElementById('authSection');
@@ -103,11 +98,13 @@ async function handleRegister(e) {
             throw new Error(data.message || 'Registration failed');
         }
 
+        // Show success message and switch to login
         successDiv.textContent = data.message || 'User created successfully! Please login.';
         successDiv.classList.remove('d-none');
         errorDiv.classList.add('d-none');
         registerForm.reset();
         
+        // Switch to login tab after 2 seconds
         setTimeout(() => {
             document.getElementById('login-tab').click();
             successDiv.classList.add('d-none');
@@ -138,8 +135,6 @@ async function handleLogout() {
         expenses = [];
         categories = [];
         allTags = {};
-        summaryData = null;
-        destroyCharts();
         showAuth();
     }
 }
@@ -157,28 +152,10 @@ function showAuth() {
 
 // Data Loading Functions
 async function loadAllData() {
-    await loadCategories();
-    await loadSummary();
+    await loadCategories(); // Load categories first
     await loadExpenses();
-    await loadAllTags();
-    updateCharts();
-}
-
-async function loadSummary() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/summary`, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-            },
-        });
-        
-        if (!response.ok) throw new Error('Failed to load summary');
-        
-        summaryData = await response.json();
-        updateSummaryCards();
-    } catch (error) {
-        console.error('Error loading summary:', error);
-    }
+    await loadAllTags(); // Load tags for all categories
+    updateStats();
 }
 
 async function loadExpenses() {
@@ -222,6 +199,7 @@ async function loadCategories() {
 
 async function loadAllTags() {
     allTags = {};
+    let totalTagCount = 0;
     
     for (const category of categories) {
         try {
@@ -234,30 +212,16 @@ async function loadAllTags() {
             if (response.ok) {
                 const tags = await response.json();
                 allTags[category.id] = tags;
+                totalTagCount += tags.length;
             }
         } catch (error) {
             console.error(`Error loading tags for category ${category.id}:`, error);
         }
     }
     
+    document.getElementById('totalTags').textContent = totalTagCount;
     renderTags();
     updateTagCheckboxes();
-}
-
-// Summary & Stats
-function updateSummaryCards() {
-    if (!summaryData) return;
-
-    const balanceColor = summaryData.total_balance >= 0 ? 'text-success' : 'text-danger';
-    
-    document.getElementById('totalBalance').textContent = `$${summaryData.total_balance.toFixed(2)}`;
-    document.getElementById('totalBalance').className = `mb-0 ${balanceColor}`;
-    
-    document.getElementById('totalIncome').textContent = `$${summaryData.total_income.toFixed(2)}`;
-    document.getElementById('totalExpenses').textContent = `$${summaryData.total_expenses.toFixed(2)}`;
-    
-    const totalTransactions = summaryData.income_transactions + summaryData.expense_transactions;
-    document.getElementById('totalTransactions').textContent = totalTransactions;
 }
 
 // Render Functions
@@ -269,7 +233,7 @@ function renderExpenses() {
             <div class="card">
                 <div class="card-body empty-state">
                     <i class="bi bi-receipt"></i>
-                    <p>No transactions yet. Click "Add Expense" to get started.</p>
+                    <p>No expenses yet. Click "Add Expense" to get started.</p>
                 </div>
             </div>
         `;
@@ -279,29 +243,23 @@ function renderExpenses() {
     container.innerHTML = expenses.map(expense => {
         const category = categories.find(c => c.id === expense.category_id);
         const expenseTags = expense.tags || [];
-        const isIncome = expense.amount > 0;
-        const amountClass = isIncome ? 'text-success' : 'text-danger';
-        const typeIcon = isIncome ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
-        const typeLabel = isIncome ? 'Income' : 'Expense';
 
         return `
             <div class="expense-item fade-in">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center gap-2 mb-2">
-                            <i class="bi ${typeIcon} ${amountClass}"></i>
                             <h6 class="mb-0">${expense.name}</h6>
                             <span class="badge bg-secondary">${category ? category.name : 'Uncategorized'}</span>
-                            <span class="badge ${isIncome ? 'bg-success' : 'bg-danger'}">${typeLabel}</span>
                         </div>
                         ${expenseTags.length > 0 ? `
-                            <div class="d-flex gap-1 ms-4">
+                            <div class="d-flex gap-1">
                                 ${expenseTags.map(tag => `<span class="badge bg-light text-dark border"><i class="bi bi-tag-fill me-1"></i>${tag.name}</span>`).join('')}
                             </div>
                         ` : ''}
                     </div>
                     <div class="d-flex align-items-center gap-3">
-                        <div class="${amountClass} fw-bold">${isIncome ? '+' : '-'}$${Math.abs(expense.amount).toFixed(2)}</div>
+                        <div class="expense-amount">$${parseFloat(expense.price).toFixed(2)}</div>
                         <div class="btn-group">
                             <button class="btn btn-sm btn-outline-primary" onclick="editExpense('${expense.id}')">
                                 <i class="bi bi-pencil"></i>
@@ -388,6 +346,7 @@ function updateCategorySelects() {
 
     selects.forEach(select => {
         const currentValue = select.value;
+        const isTagCategory = select.id === 'tagCategory';
         
         select.innerHTML = `<option value="">Select a category</option>` +
             categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
@@ -434,157 +393,16 @@ function updateTagCheckboxes() {
     });
 }
 
-// Charts
-function updateCharts() {
-    updateCategoryPieChart();
-    updateIncomeExpenseChart();
-}
-
-function updateCategoryPieChart() {
-    const canvas = document.getElementById('categoryPieChart');
-    const ctx = canvas.getContext('2d');
-
-    // Destroy existing chart
-    if (categoryPieChart) {
-        categoryPieChart.destroy();
-    }
-
-    // Calculate expenses by category (only negative amounts)
-    const categoryExpenses = {};
-    expenses.forEach(expense => {
-        if (expense.amount < 0) { // Only expenses, not income
-            const categoryId = expense.category_id;
-            const category = categories.find(c => c.id === categoryId);
-            const categoryName = category ? category.name : 'Uncategorized';
-            
-            if (!categoryExpenses[categoryName]) {
-                categoryExpenses[categoryName] = 0;
-            }
-            categoryExpenses[categoryName] += Math.abs(expense.amount);
-        }
-    });
-
-    const labels = Object.keys(categoryExpenses);
-    const data = Object.values(categoryExpenses);
-
-    if (labels.length === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.font = '14px Arial';
-        ctx.fillStyle = '#6c757d';
-        ctx.textAlign = 'center';
-        ctx.fillText('No expense data available', canvas.width / 2, canvas.height / 2);
-        return;
-    }
-
-    const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
-        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
-    ];
-
-    categoryPieChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors.slice(0, labels.length),
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.label + ': $' + context.parsed.toFixed(2);
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function updateIncomeExpenseChart() {
-    const canvas = document.getElementById('incomeExpenseChart');
-    const ctx = canvas.getContext('2d');
-
-    if (incomeExpenseChart) {
-        incomeExpenseChart.destroy();
-    }
-
-    const income = summaryData ? summaryData.total_income : 0;
-    const expense = summaryData ? summaryData.total_expenses : 0;
-
-    incomeExpenseChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Income', 'Expenses'],
-            datasets: [{
-                label: 'Amount ($)',
-                data: [income, expense],
-                backgroundColor: [
-                    'rgba(25, 135, 84, 0.7)',
-                    'rgba(220, 53, 69, 0.7)'
-                ],
-                borderColor: [
-                    'rgb(25, 135, 84)',
-                    'rgb(220, 53, 69)'
-                ],
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value.toFixed(0);
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return '$' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function destroyCharts() {
-    if (categoryPieChart) {
-        categoryPieChart.destroy();
-        categoryPieChart = null;
-    }
-    if (incomeExpenseChart) {
-        incomeExpenseChart.destroy();
-        incomeExpenseChart = null;
-    }
+function updateStats() {
+    const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.price || 0), 0);
+    document.getElementById('totalExpenses').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('totalCategories').textContent = categories.length;
 }
 
 // Expense CRUD
 async function handleAddExpense() {
     const name = document.getElementById('expenseName').value;
     const price = document.getElementById('expensePrice').value;
-    const transactionType = document.querySelector('input[name="transactionType"]:checked').value;
     const categoryId = document.getElementById('expenseCategory').value;
     const selectedTagIds = Array.from(document.querySelectorAll('#expenseTagsCheckboxes .tag-checkbox:checked'))
         .map(cb => cb.value);
@@ -594,15 +412,8 @@ async function handleAddExpense() {
         return;
     }
 
-    // Convert amount based on transaction type
-    let amount = parseFloat(price);
-    if (transactionType === 'expense') {
-        amount = -Math.abs(amount); // Make negative for expenses
-    } else {
-        amount = Math.abs(amount); // Make positive for income
-    }
-
     try {
+        // Create expense
         const response = await fetch(`${API_BASE_URL}/expense`, {
             method: 'POST',
             headers: {
@@ -611,7 +422,7 @@ async function handleAddExpense() {
             },
             body: JSON.stringify({
                 name,
-                amount: amount, // Changed from 'price' to 'amount'
+                price: parseFloat(price),
                 category_id: categoryId,
             }),
         });
@@ -636,11 +447,11 @@ async function handleAddExpense() {
 
         bootstrap.Modal.getInstance(document.getElementById('addExpenseModal')).hide();
         addExpenseForm.reset();
-        document.getElementById('typeExpense').checked = true;
-        await loadAllData();
+        await loadExpenses();
+        updateStats();
     } catch (error) {
         console.error('Error adding expense:', error);
-        alert('Failed to add transaction. Please try again.');
+        alert('Failed to add expense. Please try again.');
     }
 }
 
@@ -650,15 +461,8 @@ function editExpense(id) {
 
     document.getElementById('editExpenseId').value = expense.id;
     document.getElementById('editExpenseName').value = expense.name;
-    document.getElementById('editExpensePrice').value = Math.abs(expense.amount);
+    document.getElementById('editExpensePrice').value = expense.price;
     document.getElementById('editExpenseCategory').value = expense.category_id || '';
-
-    // Set transaction type
-    if (expense.amount >= 0) {
-        document.getElementById('editTypeIncome').checked = true;
-    } else {
-        document.getElementById('editTypeExpense').checked = true;
-    }
 
     // Set tag checkboxes
     const expenseTagIds = (expense.tags || []).map(t => t.id);
@@ -674,7 +478,6 @@ async function handleUpdateExpense() {
     const id = document.getElementById('editExpenseId').value;
     const name = document.getElementById('editExpenseName').value;
     const price = document.getElementById('editExpensePrice').value;
-    const transactionType = document.querySelector('input[name="editTransactionType"]:checked').value;
     const categoryId = document.getElementById('editExpenseCategory').value;
     const selectedTagIds = Array.from(document.querySelectorAll('#editExpenseTagsCheckboxes .tag-checkbox:checked'))
         .map(cb => cb.value);
@@ -684,15 +487,8 @@ async function handleUpdateExpense() {
         return;
     }
 
-    // Convert amount based on transaction type
-    let amount = parseFloat(price);
-    if (transactionType === 'expense') {
-        amount = -Math.abs(amount);
-    } else {
-        amount = Math.abs(amount);
-    }
-
     try {
+        // Update expense
         const response = await fetch(`${API_BASE_URL}/expense/${id}`, {
             method: 'PUT',
             headers: {
@@ -701,7 +497,7 @@ async function handleUpdateExpense() {
             },
             body: JSON.stringify({
                 name,
-                amount: amount, // Changed from 'price' to 'amount'
+                price: parseFloat(price),
                 category_id: categoryId,
             }),
         });
@@ -745,15 +541,16 @@ async function handleUpdateExpense() {
         }
 
         bootstrap.Modal.getInstance(document.getElementById('editExpenseModal')).hide();
-        await loadAllData();
+        await loadExpenses();
+        updateStats();
     } catch (error) {
         console.error('Error updating expense:', error);
-        alert('Failed to update transaction. Please try again.');
+        alert('Failed to update expense. Please try again.');
     }
 }
 
 function deleteExpense(id) {
-    showDeleteModal('Delete Transaction', 'Are you sure you want to delete this transaction?', async () => {
+    showDeleteModal('Delete Expense', 'Are you sure you want to delete this expense?', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/expense/${id}`, {
                 method: 'DELETE',
@@ -763,11 +560,12 @@ function deleteExpense(id) {
             });
 
             if (response.ok) {
-                await loadAllData();
+                await loadExpenses();
+                updateStats();
             }
         } catch (error) {
             console.error('Error deleting expense:', error);
-            alert('Failed to delete transaction. Please try again.');
+            alert('Failed to delete expense. Please try again.');
         }
     });
 }
@@ -787,29 +585,42 @@ async function handleAddCategory(e) {
             body: JSON.stringify({ name }),
         });
 
-        // Read response as text first
-        const text = await response.text();
-
-        // Try to parse JSON, otherwise show server text for debugging
-        let data;
-        try {
-            data = text ? JSON.parse(text) : null;
-        } catch (err) {
-            console.error('Server returned non-JSON response:', text);
-            throw new Error('Server error (non-JSON). Check server logs or console for details.');
-        }
-
         if (!response.ok) {
-            throw new Error(data?.message || data?.error || 'Failed to add category');
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to add category');
         }
 
         addCategoryForm.reset();
         await loadCategories();
         await loadAllTags();
+        updateStats();
     } catch (error) {
         console.error('Error adding category:', error);
         alert(error.message || 'Failed to add category. Please try again.');
     }
+}
+
+function deleteCategory(id) {
+    showDeleteModal('Delete Category', 'Are you sure you want to delete this category? This will also delete all associated tags and expenses.', async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/category/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            if (response.ok) {
+                await loadCategories();
+                await loadAllTags();
+                await loadExpenses();
+                updateStats();
+            }
+        } catch (error) {
+            console.error('Error deleting category:', error);
+            alert('Failed to delete category. Please try again.');
+        }
+    });
 }
 
 // Tag CRUD
@@ -862,7 +673,7 @@ function deleteTag(id) {
             }
 
             await loadAllTags();
-            await loadExpenses();
+            await loadExpenses(); // Refresh expenses to show updated tags
         } catch (error) {
             console.error('Error deleting tag:', error);
             alert(error.message || 'Failed to delete tag. Make sure it is not associated with any expenses.');
@@ -889,3 +700,4 @@ function showDeleteModal(title, message, callback) {
         modal.hide();
     };
 }
+

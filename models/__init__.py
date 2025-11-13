@@ -1,6 +1,3 @@
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
 
 from models.category import CategoryModel
 from models.expense import ExpenseModel
