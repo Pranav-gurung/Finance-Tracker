@@ -1,78 +1,74 @@
-from flask import request, jsonify
 from flask.views import MethodView
-from flask_smorest import Blueprint, abort
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from flask_jwt_extended import jwt_required
-from models import CategoryModel, TagModel
-from db import db
-from schemas import CategorySchema
+from flask_smorest import Blueprint
+from flask_smorest import abort
+from models import CategoryModel, TagModel, db
+from schemas import TagSchema, CategorySchema
 
-blp = Blueprint("Categories", __name__, description="Operations on categories")
+blp = Blueprint("Categories", __name__, description="Operations on categories and tags")
 
-# ----- Single Category -----
-@blp.route("/category/<string:category_id>")
-class Category(MethodView):
-    @blp.response(200, CategorySchema)
-    def get(self, category_id):
-        category = CategoryModel.query.get_or_404(category_id)
-        return category
 
-    @jwt_required()
-    def delete(self, category_id):
-        category = CategoryModel.query.get_or_404(category_id)
-        try:
-            db.session.delete(category)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
-        return {"message": "Category deleted"}
-
-# ----- Category List -----
-@blp.route("/category")
+@blp.route("/categories")
 class CategoryList(MethodView):
+
     @blp.response(200, CategorySchema(many=True))
     def get(self):
-        return CategoryModel.query.all()
+        """Get all categories"""
+        categories = CategoryModel.query.all()
+        return categories
 
-    @jwt_required()
     @blp.arguments(CategorySchema)
-    @blp.response(200, CategorySchema)
-    def post(self, category_data):
-        category = CategoryModel(**category_data)
-        try:
-            db.session.add(category)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            abort(400, message="A category with that name already exists.")
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
+    @blp.response(201, CategorySchema)
+    def post(self, new_data):
+        """Create a new category"""
+        category = CategoryModel(**new_data)
+        db.session.add(category)
+        db.session.commit()
         return category
 
-# ----- Tags under Category -----
-@blp.route("/category/<string:category_id>/tag")
-class CategoryTags(MethodView):
-    @blp.response(200, TagModel.Schema(many=True))
-    def get(self, category_id):
-        category = CategoryModel.query.get_or_404(category_id)
-        return TagModel.query.filter_by(category_id=category.id).all()
 
-    @jwt_required()
-    def post(self, category_id):
-        data = request.get_json()
-        if "name" not in data:
-            abort(400, message="Tag name is required")
+@blp.route("/categories/<int:category_id>")
+class CategoryDetail(MethodView):
+
+    @blp.response(200, CategorySchema)
+    def get(self, category_id):
+        """Get category by ID"""
         category = CategoryModel.query.get_or_404(category_id)
-        tag = TagModel(name=data["name"], category_id=category.id)
-        try:
-            db.session.add(tag)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-            abort(400, message="Tag with this name already exists in this category")
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
+        return category
+
+    @blp.arguments(CategorySchema)
+    @blp.response(200, CategorySchema)
+    def put(self, updated_data, category_id):
+        """Update category"""
+        category = CategoryModel.query.get_or_404(category_id)
+        for key, value in updated_data.items():
+            setattr(category, key, value)
+        db.session.commit()
+        return category
+
+    @blp.response(204)
+    def delete(self, category_id):
+        """Delete category"""
+        category = CategoryModel.query.get_or_404(category_id)
+        db.session.delete(category)
+        db.session.commit()
+        return ""
+
+
+@blp.route("/categories/<int:category_id>/tags")
+class CategoryTags(MethodView):
+
+    @blp.response(200, TagSchema(many=True))
+    def get(self, category_id):
+        """Get all tags for a category"""
+        category = CategoryModel.query.get_or_404(category_id)
+        return category.tags  # make sure relationship is `tags`
+
+    @blp.arguments(TagSchema)
+    @blp.response(201, TagSchema)
+    def post(self, new_data, category_id):
+        """Create a new tag under a category"""
+        category = CategoryModel.query.get_or_404(category_id)
+        tag = TagModel(**new_data, category_id=category.id)
+        db.session.add(tag)
+        db.session.commit()
         return tag
