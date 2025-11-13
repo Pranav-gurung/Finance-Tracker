@@ -18,7 +18,7 @@ services:
     ports:
     - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql   # <- changed mount point
+      - postgres_data:/var/lib/postgresql  # <- changed mount point
 
 volumes:
   postgres_data:
