@@ -787,9 +787,20 @@ async function handleAddCategory(e) {
             body: JSON.stringify({ name }),
         });
 
+        // Read response as text first
+        const text = await response.text();
+
+        // Try to parse JSON, otherwise show server text for debugging
+        let data;
+        try {
+            data = text ? JSON.parse(text) : null;
+        } catch (err) {
+            console.error('Server returned non-JSON response:', text);
+            throw new Error('Server error (non-JSON). Check server logs or console for details.');
+        }
+
         if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.message || 'Failed to add category');
+            throw new Error(data?.message || data?.error || 'Failed to add category');
         }
 
         addCategoryForm.reset();
@@ -799,26 +810,6 @@ async function handleAddCategory(e) {
         console.error('Error adding category:', error);
         alert(error.message || 'Failed to add category. Please try again.');
     }
-}
-
-function deleteCategory(id) {
-    showDeleteModal('Delete Category', 'Are you sure you want to delete this category? This will also delete all associated tags and expenses.', async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/category/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-            });
-
-            if (response.ok) {
-                await loadAllData();
-            }
-        } catch (error) {
-            console.error('Error deleting category:', error);
-            alert('Failed to delete category. Please try again.');
-        }
-    });
 }
 
 // Tag CRUD
