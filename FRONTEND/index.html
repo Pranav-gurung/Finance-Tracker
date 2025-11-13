@@ -43,8 +43,8 @@
                                 <p class="text-muted mb-4">Enter your credentials to access your account</p>
                                 <form id="loginForm">
                                     <div class="mb-3">
-                                        <label for="loginUsername" class="form-label">Username</label>
-                                        <input type="text" class="form-control" id="loginUsername" required>
+                                        <label for="loginEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="loginEmail" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="loginPassword" class="form-label">Password</label>
@@ -65,15 +65,18 @@
                                 <p class="text-muted mb-4">Enter your details to create a new account</p>
                                 <form id="registerForm">
                                     <div class="mb-3">
-                                        <label for="registerUsername" class="form-label">Username</label>
-                                        <input type="text" class="form-control" id="registerUsername" required>
+                                        <label for="registerName" class="form-label">Name</label>
+                                        <input type="text" class="form-control" id="registerName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="registerEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="registerEmail" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="registerPassword" class="form-label">Password</label>
                                         <input type="password" class="form-control" id="registerPassword" required>
                                     </div>
                                     <div id="registerError" class="alert alert-danger d-none"></div>
-                                    <div id="registerSuccess" class="alert alert-success d-none"></div>
                                     <button type="submit" class="btn btn-primary w-100">Create Account</button>
                                 </form>
                             </div>
@@ -126,7 +129,7 @@
                 <div class="col-md-4 mb-3">
                     <div class="card">
                         <div class="card-body">
-                            <h6 class="text-muted mb-2">Total Tags</h6>
+                            <h6 class="text-muted mb-2">Tags</h6>
                             <h3 class="mb-0" id="totalTags">0</h3>
                         </div>
                     </div>
@@ -172,6 +175,13 @@
                                             <label for="categoryName" class="form-label">Category Name</label>
                                             <input type="text" class="form-control" id="categoryName" placeholder="e.g., Food, Transport" required>
                                         </div>
+                                        <div class="mb-3">
+                                            <label for="categoryColor" class="form-label">Color</label>
+                                            <div class="input-group">
+                                                <input type="color" class="form-control form-control-color" id="categoryColor" value="#3b82f6">
+                                                <input type="text" class="form-control" id="categoryColorText" value="#3b82f6">
+                                            </div>
+                                        </div>
                                         <button type="submit" class="btn btn-primary w-100">
                                             <i class="bi bi-plus-circle me-2"></i>Add Category
                                         </button>
@@ -203,12 +213,6 @@
                                 <div class="card-body">
                                     <form id="addTagForm">
                                         <div class="mb-3">
-                                            <label for="tagCategory" class="form-label">Category</label>
-                                            <select class="form-select" id="tagCategory" required>
-                                                <option value="">Select a category</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
                                             <label for="tagName" class="form-label">Tag Name</label>
                                             <input type="text" class="form-control" id="tagName" placeholder="e.g., Urgent, Work" required>
                                         </div>
@@ -222,7 +226,7 @@
                         <div class="col-lg-6">
                             <div class="card">
                                 <div class="card-header">
-                                    <h5 class="mb-0">All Tags by Category</h5>
+                                    <h5 class="mb-0">All Tags (<span id="tagCount">0</span>)</h5>
                                 </div>
                                 <div class="card-body">
                                     <div id="tagsList"></div>
@@ -246,21 +250,25 @@
                 <div class="modal-body">
                     <form id="addExpenseForm">
                         <div class="mb-3">
-                            <label for="expenseName" class="form-label">Expense Name</label>
-                            <input type="text" class="form-control" id="expenseName" required>
+                            <label for="expenseDescription" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="expenseDescription" required>
                         </div>
                         <div class="mb-3">
-                            <label for="expensePrice" class="form-label">Price ($)</label>
-                            <input type="number" step="0.01" class="form-control" id="expensePrice" required>
+                            <label for="expenseAmount" class="form-label">Amount ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="expenseAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="expenseDate" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="expenseDate" required>
                         </div>
                         <div class="mb-3">
                             <label for="expenseCategory" class="form-label">Category</label>
-                            <select class="form-select" id="expenseCategory" required>
+                            <select class="form-select" id="expenseCategory">
                                 <option value="">Select a category</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Tags (Optional)</label>
+                            <label class="form-label">Tags</label>
                             <div id="expenseTagsCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                             </div>
                         </div>
@@ -286,16 +294,20 @@
                     <form id="editExpenseForm">
                         <input type="hidden" id="editExpenseId">
                         <div class="mb-3">
-                            <label for="editExpenseName" class="form-label">Expense Name</label>
-                            <input type="text" class="form-control" id="editExpenseName" required>
+                            <label for="editExpenseDescription" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="editExpenseDescription" required>
                         </div>
                         <div class="mb-3">
-                            <label for="editExpensePrice" class="form-label">Price ($)</label>
-                            <input type="number" step="0.01" class="form-control" id="editExpensePrice" required>
+                            <label for="editExpenseAmount" class="form-label">Amount ($)</label>
+                            <input type="number" step="0.01" class="form-control" id="editExpenseAmount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editExpenseDate" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="editExpenseDate" required>
                         </div>
                         <div class="mb-3">
                             <label for="editExpenseCategory" class="form-label">Category</label>
-                            <select class="form-select" id="editExpenseCategory" required>
+                            <select class="form-select" id="editExpenseCategory">
                                 <option value="">Select a category</option>
                             </select>
                         </div>
