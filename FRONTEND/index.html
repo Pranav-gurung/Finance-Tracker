@@ -9,6 +9,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -107,27 +110,59 @@
         <div class="container-fluid py-4">
             <!-- Stats Cards -->
             <div class="row mb-4">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Total Balance</h6>
+                            <h3 class="mb-0" id="totalBalance">$0.00</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="text-muted mb-2">Total Income</h6>
+                            <h3 class="text-success mb-0" id="totalIncome">$0.00</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
                     <div class="card">
                         <div class="card-body">
                             <h6 class="text-muted mb-2">Total Expenses</h6>
-                            <h3 class="text-success mb-0" id="totalExpenses">$0.00</h3>
+                            <h3 class="text-danger mb-0" id="totalExpenses">$0.00</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                     <div class="card">
                         <div class="card-body">
-                            <h6 class="text-muted mb-2">Categories</h6>
-                            <h3 class="mb-0" id="totalCategories">0</h3>
+                            <h6 class="text-muted mb-2">Transactions</h6>
+                            <h3 class="mb-0" id="totalTransactions">0</h3>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 mb-3">
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <div class="col-lg-6 mb-3">
                     <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Expenses by Category</h5>
+                        </div>
                         <div class="card-body">
-                            <h6 class="text-muted mb-2">Total Tags</h6>
-                            <h3 class="mb-0" id="totalTags">0</h3>
+                            <canvas id="categoryPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Income vs Expenses</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="incomeExpenseChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -246,11 +281,24 @@
                 <div class="modal-body">
                     <form id="addExpenseForm">
                         <div class="mb-3">
-                            <label for="expenseName" class="form-label">Expense Name</label>
+                            <label class="form-label">Transaction Type</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="transactionType" id="typeExpense" value="expense" checked>
+                                <label class="btn btn-outline-danger" for="typeExpense">
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Expense
+                                </label>
+                                <input type="radio" class="btn-check" name="transactionType" id="typeIncome" value="income">
+                                <label class="btn btn-outline-success" for="typeIncome">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>Income
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="expenseName" class="form-label">Description</label>
                             <input type="text" class="form-control" id="expenseName" required>
                         </div>
                         <div class="mb-3">
-                            <label for="expensePrice" class="form-label">Price ($)</label>
+                            <label for="expensePrice" class="form-label">Amount ($)</label>
                             <input type="number" step="0.01" class="form-control" id="expensePrice" required>
                         </div>
                         <div class="mb-3">
@@ -286,11 +334,24 @@
                     <form id="editExpenseForm">
                         <input type="hidden" id="editExpenseId">
                         <div class="mb-3">
-                            <label for="editExpenseName" class="form-label">Expense Name</label>
+                            <label class="form-label">Transaction Type</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="editTransactionType" id="editTypeExpense" value="expense" checked>
+                                <label class="btn btn-outline-danger" for="editTypeExpense">
+                                    <i class="bi bi-arrow-down-circle me-1"></i>Expense
+                                </label>
+                                <input type="radio" class="btn-check" name="editTransactionType" id="editTypeIncome" value="income">
+                                <label class="btn btn-outline-success" for="editTypeIncome">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>Income
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editExpenseName" class="form-label">Description</label>
                             <input type="text" class="form-control" id="editExpenseName" required>
                         </div>
                         <div class="mb-3">
-                            <label for="editExpensePrice" class="form-label">Price ($)</label>
+                            <label for="editExpensePrice" class="form-label">Amount ($)</label>
                             <input type="number" step="0.01" class="form-control" id="editExpensePrice" required>
                         </div>
                         <div class="mb-3">

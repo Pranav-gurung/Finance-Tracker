@@ -9,3 +9,4 @@ class TagModel(db.Model):
     category_id = db.Column(db.Integer,db.ForeignKey("category.id"), nullable=False)
     category = db.relationship("CategoryModel", back_populates="tag")
     expense=db.relationship("ExpenseModel",back_populates="tag",secondary="expense_tag")
+    balance = db.Column(db.Float, default=0.0)
