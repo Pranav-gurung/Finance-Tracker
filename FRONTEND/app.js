@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://finance-tracker-vqwo.onrender.com';
+const API_BASE_URL = 'http://127.0.0.1:5000';
 
 // State Management
 let accessToken = null;
