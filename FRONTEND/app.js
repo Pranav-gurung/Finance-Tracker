@@ -590,12 +590,10 @@ function deleteExpense(id) {
 // Category CRUD
 async function handleAddCategory(e) {
     e.preventDefault();
-    const name = document.getElementById('categoryName').value.trim();
+    const nameInput = document.getElementById('categoryName');
+    const name = nameInput.value.trim();
 
-    if (!name) {
-        alert('Please enter a category name');
-        return;
-    }
+    if (!name) return alert('Please enter a category name');
 
     try {
         const response = await fetch(`${API_BASE_URL}/category`, {
@@ -613,18 +611,23 @@ async function handleAddCategory(e) {
             throw new Error(data.message || 'Failed to add category');
         }
 
-        // Reset form and reload categories/tags
-        addCategoryForm.reset();
-        await loadCategories();  // refresh category list
-        await loadAllTags();     // refresh tag list
-        updateStats();           // update stats if necessary
+        // ✅ Optimistically update local categories array
+        categories.push({ id: data.id, name: data.name });
 
+        // Re-render UI and dropdowns
+        renderCategories();
+        updateCategorySelects();
+        await loadAllTags(); // Optional: refresh tags if needed
+        updateStats();
+
+        addCategoryForm.reset();
         alert(`Category "${name}" added successfully!`);
     } catch (error) {
         console.error('Error adding category:', error);
         alert(error.message || 'Failed to add category. Please try again.');
     }
 }
+
 
 function deleteCategory(id) {
     showDeleteModal('Delete Category', 'Are you sure you want to delete this category? This will also delete all associated tags and expenses.', async () => {
