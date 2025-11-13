@@ -400,7 +400,79 @@ function updateStats() {
 }
 
 // Expense CRUD
+async function handleAddExpense() {
+    const name = document.getElementById('expenseName').value;
+    const price = document.getElementById('expensePrice').value;
+    const categoryId = document.getElementById('expenseCategory').value;
+    const selectedTagIds = Array.from(document.querySelectorAll('#expenseTagsCheckboxes .tag-checkbox:checked'))
+        .map(cb => cb.value);
 
+    if (!categoryId) {
+        alert('Please select a category');
+        return;
+    }
+
+    try {
+        // Create expense
+        const response = await fetch(`${API_BASE_URL}/expense`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name,
+                price: parseFloat(price),
+                category_id: categoryId,
+            }),
+        });
+
+        if (!response.ok) throw new Error('Failed to create expense');
+
+        const newExpense = await response.json();
+
+        // Link tags to expense
+        for (const tagId of selectedTagIds) {
+            try {
+                await fetch(`${API_BASE_URL}/expense/${newExpense.id}/tag/${tagId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                    },
+                });
+            } catch (error) {
+                console.error('Error linking tag:', error);
+            }
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('addExpenseModal')).hide();
+        addExpenseForm.reset();
+        await loadExpenses();
+        updateStats();
+    } catch (error) {
+        console.error('Error adding expense:', error);
+        alert('Failed to add expense. Please try again.');
+    }
+}
+
+function editExpense(id) {
+    const expense = expenses.find(e => e.id === id);
+    if (!expense) return;
+
+    document.getElementById('editExpenseId').value = expense.id;
+    document.getElementById('editExpenseName').value = expense.name;
+    document.getElementById('editExpensePrice').value = expense.price;
+    document.getElementById('editExpenseCategory').value = expense.category_id || '';
+
+    // Set tag checkboxes
+    const expenseTagIds = (expense.tags || []).map(t => t.id);
+    const tagCheckboxes = document.querySelectorAll('#editExpenseTagsCheckboxes .tag-checkbox');
+    tagCheckboxes.forEach(cb => {
+        cb.checked = expenseTagIds.includes(cb.value);
+    });
+
+    new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
+}
 
 async function handleUpdateExpense() {
     const id = document.getElementById('editExpenseId').value;
