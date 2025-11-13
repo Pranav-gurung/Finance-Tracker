@@ -46,31 +46,32 @@ class Expense(MethodView):
         return expense
 
 @blp.route("/expense")
-@jwt_required(fresh=True)
-@blp.arguments(ExpenseSchema)
-@blp.response(201, ExpenseSchema)
-def post(self, expense_data):
-    from flask_jwt_extended import get_jwt_identity
-    
-    # Identify the user adding the transaction
-    user_id = get_jwt_identity()
-    expense = ExpenseModel(**expense_data, user_id=user_id)
+class ExpenseList(MethodView):
+    @jwt_required(fresh=True)
+    @blp.arguments(ExpenseSchema)
+    @blp.response(201, ExpenseSchema)
+    def post(self, expense_data):
+        from flask_jwt_extended import get_jwt_identity
+        
+        # Identify the user adding the transaction
+        user_id = get_jwt_identity()
+        expense = ExpenseModel(**expense_data, user_id=user_id)
 
-    try:
-        # Save the expense/income
-        db.session.add(expense)
+        try:
+            # Save the expense/income
+            db.session.add(expense)
 
-        # 🔥 Auto-update user balance
-        user = UserModel.query.get(user_id)
-        if expense.type.lower() == "income":
-            user.balance += expense.price
-        elif expense.type.lower() == "expense":
-            user.balance -= expense.price
+            # 🔥 Auto-update user balance
+            user = UserModel.query.get(user_id)
+            if expense.type.lower() == "income":
+                user.balance += expense.price
+            elif expense.type.lower() == "expense":
+                user.balance -= expense.price
 
-        db.session.commit()
+            db.session.commit()
 
-    except SQLAlchemyError as e:
-        print(e)
-        abort(500, message="An error occurred while inserting the item.")
+        except SQLAlchemyError as e:
+            print(e)
+            abort(500, message="An error occurred while inserting the item.")
 
-    return expense
+        return expense
