@@ -1,78 +1,77 @@
+
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required ,  get_jwt
 from sqlalchemy.exc import SQLAlchemyError
-from flask import request
+from flask import make_response, jsonify
 from db import db
-from models import ExpenseModel, UserModel
-from schemas import ExpenseSchema, ExpenseUpdateSchema
+from models import ExpenseModel
+from models import UserModel
 
 blp = Blueprint("Expense", __name__, description="Operations on expenses")
+from schemas import ExpenseSchema ,ExpenseUpdateSchema
 
-# ----- Single Expense -----
 @blp.route("/expense/<string:expense_id>")
 class Expense(MethodView):
+    @blp.response(200,ExpenseSchema)
     @jwt_required()
-    @blp.response(200, ExpenseSchema)
     def get(self, expense_id):
         expense = ExpenseModel.query.get_or_404(expense_id)
         return expense
 
     @jwt_required()
     def delete(self, expense_id):
-        expense = ExpenseModel.query.get_or_404(expense_id)
-        try:
-            db.session.delete(expense)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
-        return {"message": "Expense deleted"}
+        def delete(self, item_id):
+            jwt = get_jwt()
+            if not jwt.get("is_admin"):
+                abort(401, message="Admin privilege required.")
 
-    @jwt_required()
+        expense = ExpenseModel.query.get_or_404(expense_id)
+        db.session.delete(expense)
+        db.session.commit()
+        return{"message":"Expense deleted"}
+
     @blp.arguments(ExpenseUpdateSchema)
-    @blp.response(200, ExpenseSchema)
-    def put(self, expense_data, expense_id):
+    @blp.response( 200 ,ExpenseSchema)
+    def put(self, expense_data ,expense_id):
         expense = ExpenseModel.query.get(expense_id)
         if expense:
-            expense.amount = expense_data["amount"]
-            expense.name = expense_data["name"]
-            expense.category_id = expense_data["category_id"]
+            expense.price=expense_data["price"]
+            expense.name=expense_data["name"]
         else:
-            expense = ExpenseModel(id=expense_id, **expense_data, user_id=get_jwt_identity())
-        try:
-            db.session.add(expense)
-            db.session.commit()
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
+            expense=ExpenseModel(id = expense_id ,**expense_data)
+        db.session.add(expense)
+        db.session.commit()
+
         return expense
 
-# ----- Expense List -----
 @blp.route("/expense")
 class ExpenseList(MethodView):
-    @jwt_required()
-    @blp.response(200, ExpenseSchema(many=True))
-    def get(self):
-        user_id = get_jwt_identity()
-        return ExpenseModel.query.filter_by(user_id=user_id).all()
-
     @jwt_required(fresh=True)
     @blp.arguments(ExpenseSchema)
     @blp.response(201, ExpenseSchema)
     def post(self, expense_data):
+        from flask_jwt_extended import get_jwt_identity
+        
+        # Identify the user adding the transaction
         user_id = get_jwt_identity()
         expense = ExpenseModel(**expense_data, user_id=user_id)
+
         try:
+            # Save the expense/income
             db.session.add(expense)
-            # Update user balance
+
+            # 🔥 Auto-update user balance
             user = UserModel.query.get(user_id)
-            if expense.amount > 0:
-                user.balance += expense.amount
-            else:
-                user.balance += expense.amount  # expense.amount is negative
+            if expense.type.lower() == "income":
+                user.balance += expense.price
+            elif expense.type.lower() == "expense":
+                user.balance -= expense.price
+
             db.session.commit()
+
         except SQLAlchemyError as e:
-            db.session.rollback()
-            abort(500, message=f"Database error: {str(e)}")
+            print(e)
+            abort(500, message="An error occurred while inserting the item.")
+
         return expense
