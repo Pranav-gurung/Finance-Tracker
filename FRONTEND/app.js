@@ -3,9 +3,9 @@ const API_BASE_URL = 'https://finance-tracker-vqwo.onrender.com';
 // State Management
 let accessToken = null;
 let refreshToken = null;
-let expense = [];
+let expenses = [];
 let categories = [];
-let allTag = {}; // Organized by category
+let allTags = {}; // Organized by category
 
 // DOM Elements
 const authSection = document.getElementById('authSection');
@@ -132,9 +132,9 @@ async function handleLogout() {
         localStorage.removeItem('refreshToken');
         accessToken = null;
         refreshToken = null;
-        expense = [];
+        expenses = [];
         categories = [];
-        allTag = {};
+        allTags = {};
         showAuth();
     }
 }
@@ -153,12 +153,12 @@ function showAuth() {
 // Data Loading Functions
 async function loadAllData() {
     await loadCategories(); // Load categories first
-    await loadExpense();
-    await loadAllTag(); // Load tags for all categories
+    await loadExpenses();
+    await loadAllTags(); // Load tags for all categories
     updateStats();
 }
 
-async function loadExpense() {
+async function loadExpenses() {
     try {
         const response = await fetch(`${API_BASE_URL}/expense`, {
             headers: {
@@ -166,14 +166,14 @@ async function loadExpense() {
             },
         });
         
-        if (!response.ok) throw new Error('Failed to load expense');
+        if (!response.ok) throw new Error('Failed to load expenses');
         
-        expense = await response.json();
-        renderExpense();
+        expenses = await response.json();
+        renderExpenses();
     } catch (error) {
-        console.error('Error loading expense:', error);
-        expense = [];
-        renderExpense();
+        console.error('Error loading expenses:', error);
+        expenses = [];
+        renderExpenses();
     }
 }
 
@@ -197,8 +197,8 @@ async function loadCategories() {
     }
 }
 
-async function loadAllTag() {
-    allTag = {};
+async function loadAllTags() {
+    allTags = {};
     let totalTagCount = 0;
     
     for (const category of categories) {
@@ -210,39 +210,39 @@ async function loadAllTag() {
             });
             
             if (response.ok) {
-                const tag = await response.json();
-                allTag[category.id] = tag;
-                totalTagCount += tag.length;
+                const tags = await response.json();
+                allTags[category.id] = tags;
+                totalTagCount += tags.length;
             }
         } catch (error) {
-            console.error(`Error loading tag for category ${category.id}:`, error);
+            console.error(`Error loading tags for category ${category.id}:`, error);
         }
     }
     
-    document.getElementById('totalTag').textContent = totalTagCount;
-    renderTag();
+    document.getElementById('totalTags').textContent = totalTagCount;
+    renderTags();
     updateTagCheckboxes();
 }
 
 // Render Functions
-function renderExpense() {
-    const container = document.getElementById('expenseList');
+function renderExpenses() {
+    const container = document.getElementById('expensesList');
     
-    if (!expense || expense.length === 0) {
+    if (!expenses || expenses.length === 0) {
         container.innerHTML = `
             <div class="card">
                 <div class="card-body empty-state">
                     <i class="bi bi-receipt"></i>
-                    <p>No expense yet. Click "Add Expense" to get started.</p>
+                    <p>No expenses yet. Click "Add Expense" to get started.</p>
                 </div>
             </div>
         `;
         return;
     }
 
-    container.innerHTML = expense.map(expense => {
+    container.innerHTML = expenses.map(expense => {
         const category = categories.find(c => c.id === expense.category_id);
-        const expenseTag = expense.tag || [];
+        const expenseTags = expense.tags || [];
 
         return `
             <div class="expense-item fade-in">
@@ -252,9 +252,9 @@ function renderExpense() {
                             <h6 class="mb-0">${expense.name}</h6>
                             <span class="badge bg-secondary">${category ? category.name : 'Uncategorized'}</span>
                         </div>
-                        ${expenseTag.length > 0 ? `
+                        ${expenseTags.length > 0 ? `
                             <div class="d-flex gap-1">
-                                ${expenseTag.map(tag => `<span class="badge bg-light text-dark border"><i class="bi bi-tag-fill me-1"></i>${tag.name}</span>`).join('')}
+                                ${expenseTags.map(tag => `<span class="badge bg-light text-dark border"><i class="bi bi-tag-fill me-1"></i>${tag.name}</span>`).join('')}
                             </div>
                         ` : ''}
                     </div>
@@ -297,26 +297,26 @@ function renderCategories() {
     `).join('');
 }
 
-function renderTag() {
-    const container = document.getElementById('tagList');
+function renderTags() {
+    const container = document.getElementById('tagsList');
     
     if (categories.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center py-4">Create a category first to add tag</p>';
+        container.innerHTML = '<p class="text-muted text-center py-4">Create a category first to add tags</p>';
         return;
     }
 
-    let hasAnyTag = false;
+    let hasAnyTags = false;
     let html = '';
 
     for (const category of categories) {
-        const tag = allTag[category.id] || [];
-        if (tag.length > 0) {
-            hasAnyTag = true;
+        const tags = allTags[category.id] || [];
+        if (tags.length > 0) {
+            hasAnyTags = true;
             html += `
                 <div class="mb-3">
                     <h6 class="mb-2"><i class="bi bi-folder-fill text-primary me-2"></i>${category.name}</h6>
                     <div class="d-flex flex-wrap gap-2">
-                        ${tag.map(tag => `
+                        ${tags.map(tag => `
                             <span class="tag-badge">
                                 <i class="bi bi-tag me-1"></i>${tag.name}
                                 <button class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="deleteTag('${tag.id}')" style="text-decoration: none;">
@@ -330,7 +330,7 @@ function renderTag() {
         }
     }
 
-    if (!hasAnyTag) {
+    if (!hasAnyTags) {
         container.innerHTML = '<p class="text-muted text-center py-4">No tags yet</p>';
     } else {
         container.innerHTML = html;
@@ -364,17 +364,17 @@ function updateTagCheckboxes() {
     ];
 
     containers.forEach(({ elem, prefix }) => {
-        let hasAnyTag = false;
+        let hasAnyTags = false;
         let html = '';
 
         for (const category of categories) {
-            const tag = allTag[category.id] || [];
-            if (tag.length > 0) {
-                hasAnyTag = true;
+            const tags = allTags[category.id] || [];
+            if (tags.length > 0) {
+                hasAnyTags = true;
                 html += `
                     <div class="mb-2">
                         <strong class="d-block mb-1 text-muted small">${category.name}</strong>
-                        ${tag.map(tag => `
+                        ${tags.map(tag => `
                             <div class="form-check">
                                 <input class="form-check-input tag-checkbox" type="checkbox" value="${tag.id}" id="${prefix}-tag-${tag.id}">
                                 <label class="form-check-label" for="${prefix}-tag-${tag.id}">${tag.name}</label>
@@ -385,7 +385,7 @@ function updateTagCheckboxes() {
             }
         }
 
-        if (!hasAnyTag) {
+        if (!hasAnyTags) {
             elem.innerHTML = '<p class="text-muted text-center small mb-0">No tags available</p>';
         } else {
             elem.innerHTML = html;
@@ -394,8 +394,8 @@ function updateTagCheckboxes() {
 }
 
 function updateStats() {
-    const total = expense.reduce((sum, exp) => sum + parseFloat(exp.price || 0), 0);
-    document.getElementById('totalExpense').textContent = `$${total.toFixed(2)}`;
+    const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.price || 0), 0);
+    document.getElementById('totalExpenses').textContent = `$${total.toFixed(2)}`;
     document.getElementById('totalCategories').textContent = categories.length;
 }
 
@@ -457,7 +457,7 @@ async function handleAddExpense() {
         addExpenseForm.reset();
 
         // 4️⃣ Reload expenses and update stats
-        await loadExpense();
+        await loadExpenses();
         updateStats();
 
     } catch (error) {
@@ -498,7 +498,7 @@ async function handleUpdateExpense() {
         if (!response.ok) throw new Error('Failed to update expense');
 
         // Get current tags
-        const expense = expense.find(e => e.id === id);
+        const expense = expenses.find(e => e.id === id);
         const currentTagIds = (expense.tags || []).map(t => t.id);
 
         // Remove unselected tags
@@ -534,7 +534,7 @@ async function handleUpdateExpense() {
         }
 
         bootstrap.Modal.getInstance(document.getElementById('editExpenseModal')).hide();
-        await loadExpense();
+        await loadExpenses();
         updateStats();
     } catch (error) {
         console.error('Error updating expense:', error);
@@ -553,7 +553,7 @@ function deleteExpense(id) {
             });
 
             if (response.ok) {
-                await loadExpense();
+                await loadExpenses();
                 updateStats();
             }
         } catch (error) {
@@ -585,7 +585,7 @@ async function handleAddCategory(e) {
 
         addCategoryForm.reset();
         await loadCategories();
-        await loadAllTag();
+        await loadAllTags();
         updateStats();
     } catch (error) {
         console.error('Error adding category:', error);
@@ -605,8 +605,8 @@ function deleteCategory(id) {
 
             if (response.ok) {
                 await loadCategories();
-                await loadAllTag();
-                await loadExpense();
+                await loadAllTags();
+                await loadExpenses();
                 updateStats();
             }
         } catch (error) {
@@ -643,7 +643,7 @@ async function handleAddTag(e) {
         }
 
         addTagForm.reset();
-        await loadAllTag();
+        await loadAllTags();
     } catch (error) {
         console.error('Error adding tag:', error);
         alert(error.message || 'Failed to add tag. Please try again.');
@@ -665,11 +665,11 @@ function deleteTag(id) {
                 throw new Error(data.message || 'Failed to delete tag');
             }
 
-            await loadAllTag();
-            await loadExpense(); // Refresh expenses to show updated tags
+            await loadAllTags();
+            await loadExpenses(); // Refresh expenses to show updated tags
         } catch (error) {
             console.error('Error deleting tag:', error);
-            alert(error.message || 'Failed to delete tag. Make sure it is not associated with any expense.');
+            alert(error.message || 'Failed to delete tag. Make sure it is not associated with any expenses.');
         }
     });
 }
