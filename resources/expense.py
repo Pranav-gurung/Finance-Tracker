@@ -6,7 +6,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask import make_response, jsonify
 from db import db
 from models import ExpenseModel
-from models import UserModel
 
 blp = Blueprint("Expense", __name__, description="Operations on expenses")
 from schemas import ExpenseSchema ,ExpenseUpdateSchema
@@ -46,31 +45,20 @@ class Expense(MethodView):
         return expense
 
 @blp.route("/expense")
-@jwt_required(fresh=True)
-@blp.arguments(ExpenseSchema)
-@blp.response(201, ExpenseSchema)
-def post(self, expense_data):
-    from flask_jwt_extended import get_jwt_identity
-    
-    # Identify the user adding the transaction
-    user_id = get_jwt_identity()
-    expense = ExpenseModel(**expense_data, user_id=user_id)
+class ExpenseList(MethodView):
+    @jwt_required()
+    @blp.response(200, ExpenseSchema(many=True))
+    def get(self):
+        return ExpenseModel.query.all() 
 
-    try:
-        # Save the expense/income
-        db.session.add(expense)
-
-        # 🔥 Auto-update user balance
-        user = UserModel.query.get(user_id)
-        if expense.type.lower() == "income":
-            user.balance += expense.price
-        elif expense.type.lower() == "expense":
-            user.balance -= expense.price
-
-        db.session.commit()
-
-    except SQLAlchemyError as e:
-        print(e)
-        abort(500, message="An error occurred while inserting the item.")
-
-    return expense
+    @jwt_required(fresh=True)
+    @blp.arguments(ExpenseSchema)
+    @blp.response(201, ExpenseSchema)
+    def post(self, expense_data):
+        expense = ExpenseModel(**expense_data)
+        try:
+            db.session.add(expense)
+            db.session.commit()
+        except SQLAlchemyError:
+            abort(500, message="An error occurred while inserting the item.")
+        return expense  # ✅ Flask-Smorest will serialize & return 201

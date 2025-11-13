@@ -13,8 +13,6 @@ from resources.expense import blp as ExpenseBlueprint
 from resources.category import blp as CategoryBlueprint
 from resources.tag import blp as TagBlueprint
 from resources.user import blp as UserBlueprint
-from resources.summary import blp as SummaryBlueprint
-
 from flask_cors import CORS
 def create_app(db_url=None):
     app = Flask(__name__)
@@ -109,6 +107,6 @@ def create_app(db_url=None):
     api.register_blueprint(CategoryBlueprint)
     api.register_blueprint(TagBlueprint)
     api.register_blueprint(UserBlueprint)
-    api.register_blueprint(SummaryBlueprint)
- 
+
+
     return app
