@@ -8,7 +8,7 @@ from db import db
 
 from schemas import CategorySchema 
 
-blp = Blueprint("Stores", __name__, description="Operations on categories")
+blp = Blueprint("Categories", __name__, description="Operations on categories")
 
 
 @blp.route("/category/<string:category_id>")

@@ -1,13 +1,15 @@
 // Configuration - Replace with your actual API URL
 const API_BASE_URL = 'https://finance-tracker-vqwo.onrender.com';
-// State
+
+// ==================== STATE MANAGEMENT ====================
 let accessToken = null;
 let refreshToken = null;
+let currentUser = null;
 let categories = [];
 let expenses = [];
-let allTags = {};
+let tagsByCategory = {}; // { category_id: [tags] }
 
-// Initialize
+// ==================== INITIALIZATION ====================
 document.addEventListener('DOMContentLoaded', function() {
     // Check for existing session
     accessToken = localStorage.getItem('accessToken');
@@ -16,23 +18,35 @@ document.addEventListener('DOMContentLoaded', function() {
     if (accessToken) {
         showApp();
         loadAllData();
+    } else {
+        showAuth();
     }
 
-    // Event Listeners
+    // Set up event listeners
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Auth forms
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    
+    // Category form
     document.getElementById('addCategoryForm').addEventListener('submit', handleAddCategory);
+    
+    // Tag form
     document.getElementById('addTagForm').addEventListener('submit', handleAddTag);
+    
+    // Expense forms
     document.getElementById('saveExpenseBtn').addEventListener('click', handleAddExpense);
     document.getElementById('updateExpenseBtn').addEventListener('click', handleUpdateExpense);
-});
+}
 
-// ========== AUTHENTICATION ==========
-
+// ==================== AUTHENTICATION ====================
 async function handleLogin(e) {
     e.preventDefault();
-    const username = document.getElementById('loginUsername').value;
+    const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorDiv = document.getElementById('loginError');
 
@@ -43,7 +57,10 @@ async function handleLogin(e) {
             body: JSON.stringify({ username, password })
         });
 
-        if (!response.ok) throw new Error('Login failed');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Invalid credentials');
+        }
 
         const data = await response.json();
         accessToken = data.access_token;
@@ -55,16 +72,17 @@ async function handleLogin(e) {
         errorDiv.classList.add('d-none');
         document.getElementById('loginForm').reset();
         showApp();
-        loadAllData();
+        await loadAllData();
+        
     } catch (error) {
-        errorDiv.textContent = 'Invalid username or password';
+        errorDiv.textContent = error.message || 'Login failed. Please check your credentials.';
         errorDiv.classList.remove('d-none');
     }
 }
 
 async function handleRegister(e) {
     e.preventDefault();
-    const username = document.getElementById('registerUsername').value;
+    const username = document.getElementById('registerUsername').value.trim();
     const password = document.getElementById('registerPassword').value;
     const errorDiv = document.getElementById('registerError');
     const successDiv = document.getElementById('registerSuccess');
@@ -82,7 +100,7 @@ async function handleRegister(e) {
             throw new Error(data.message || 'Registration failed');
         }
 
-        successDiv.textContent = 'Account created successfully! Please login.';
+        successDiv.textContent = data.message || 'User created successfully! Please login.';
         successDiv.classList.remove('d-none');
         errorDiv.classList.add('d-none');
         document.getElementById('registerForm').reset();
@@ -93,7 +111,7 @@ async function handleRegister(e) {
         }, 2000);
         
     } catch (error) {
-        errorDiv.textContent = error.message;
+        errorDiv.textContent = error.message || 'Registration failed. Please try again.';
         errorDiv.classList.remove('d-none');
         successDiv.classList.add('d-none');
     }
@@ -109,13 +127,16 @@ async function handleLogout() {
         console.error('Logout error:', error);
     }
     
+    // Clear everything
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     accessToken = null;
     refreshToken = null;
+    currentUser = null;
     categories = [];
     expenses = [];
-    allTags = {};
+    tagsByCategory = {};
+    
     showAuth();
 }
 
@@ -129,12 +150,15 @@ function showAuth() {
     document.getElementById('appSection').classList.add('d-none');
 }
 
-// ========== DATA LOADING ==========
-
+// ==================== DATA LOADING ====================
 async function loadAllData() {
-    await loadCategories();
-    await loadExpenses();
-    await loadAllTags();
+    try {
+        await loadCategories();
+        await loadExpenses();
+        await loadAllTags();
+    } catch (error) {
+        console.error('Error loading data:', error);
+    }
 }
 
 async function loadCategories() {
@@ -148,9 +172,11 @@ async function loadCategories() {
         categories = await response.json();
         renderCategories();
         updateCategorySelects();
+        
     } catch (error) {
         console.error('Error loading categories:', error);
         categories = [];
+        renderCategories();
     }
 }
 
@@ -164,14 +190,16 @@ async function loadExpenses() {
         
         expenses = await response.json();
         renderExpenses();
+        
     } catch (error) {
         console.error('Error loading expenses:', error);
         expenses = [];
+        renderExpenses();
     }
 }
 
 async function loadAllTags() {
-    allTags = {};
+    tagsByCategory = {};
     
     for (const category of categories) {
         try {
@@ -180,22 +208,24 @@ async function loadAllTags() {
             });
             
             if (response.ok) {
-                allTags[category.id] = await response.json();
+                tagsByCategory[category.id] = await response.json();
+            } else {
+                tagsByCategory[category.id] = [];
             }
         } catch (error) {
-            console.error('Error loading tags:', error);
+            console.error(`Error loading tags for category ${category.id}:`, error);
+            tagsByCategory[category.id] = [];
         }
     }
     
     renderTags();
-    updateTagSelects();
+    updateTagSelections();
 }
 
-// ========== CATEGORIES ==========
-
+// ==================== CATEGORIES ====================
 async function handleAddCategory(e) {
     e.preventDefault();
-    const name = document.getElementById('categoryName').value;
+    const name = document.getElementById('categoryName').value.trim();
 
     try {
         const response = await fetch(`${API_BASE_URL}/category`, {
@@ -207,13 +237,18 @@ async function handleAddCategory(e) {
             body: JSON.stringify({ name })
         });
 
-        if (!response.ok) throw new Error('Failed to create category');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to create category');
+        }
 
         document.getElementById('addCategoryForm').reset();
         await loadCategories();
         await loadAllTags();
+        showNotification('Category created successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to add category: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
@@ -221,17 +256,28 @@ function renderCategories() {
     const container = document.getElementById('categoriesList');
     
     if (categories.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center py-4">No categories yet. Add your first category!</p>';
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-folder text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">No categories yet. Create your first category!</p>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = categories.map(cat => `
-        <div class="d-flex justify-content-between align-items-center p-3 mb-2 bg-light rounded">
-            <div>
-                <i class="bi bi-folder-fill text-primary me-2"></i>
-                <strong>${cat.name}</strong>
+        <div class="category-item">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-folder-fill text-primary me-3 fs-5"></i>
+                <div class="flex-grow-1">
+                    <strong>${escapeHtml(cat.name)}</strong>
+                    <small class="text-muted d-block">
+                        ${cat.expense ? cat.expense.length : 0} expenses, 
+                        ${cat.tag ? cat.tag.length : 0} tags
+                    </small>
+                </div>
             </div>
-            <button class="btn btn-sm btn-danger" onclick="deleteCategory('${cat.id}')">
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteCategory('${cat.id}')">
                 <i class="bi bi-trash"></i>
             </button>
         </div>
@@ -239,7 +285,7 @@ function renderCategories() {
 }
 
 async function deleteCategory(id) {
-    if (!confirm('Delete this category? This will also delete all associated tags and expenses.')) return;
+    if (!confirm('Delete this category? All associated expenses and tags will also be deleted.')) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/category/${id}`, {
@@ -250,8 +296,10 @@ async function deleteCategory(id) {
         if (!response.ok) throw new Error('Failed to delete category');
 
         await loadAllData();
+        showNotification('Category deleted successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to delete category: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
@@ -264,21 +312,26 @@ function updateCategorySelects() {
 
     selects.forEach(select => {
         const currentValue = select.value;
-        select.innerHTML = '<option value="">Select a category</option>' +
-            categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
-        if (currentValue) select.value = currentValue;
+        const options = categories.map(cat => 
+            `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`
+        ).join('');
+        
+        select.innerHTML = '<option value="">Choose a category...</option>' + options;
+        
+        if (currentValue && categories.find(c => c.id == currentValue)) {
+            select.value = currentValue;
+        }
     });
 }
 
-// ========== TAGS ==========
-
+// ==================== TAGS ====================
 async function handleAddTag(e) {
     e.preventDefault();
     const categoryId = document.getElementById('tagCategory').value;
-    const name = document.getElementById('tagName').value;
+    const name = document.getElementById('tagName').value.trim();
 
     if (!categoryId) {
-        alert('Please select a category');
+        showNotification('Please select a category', 'warning');
         return;
     }
 
@@ -292,12 +345,17 @@ async function handleAddTag(e) {
             body: JSON.stringify({ name })
         });
 
-        if (!response.ok) throw new Error('Failed to create tag');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to create tag');
+        }
 
         document.getElementById('addTagForm').reset();
         await loadAllTags();
+        showNotification('Tag created successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to add tag: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
@@ -305,26 +363,34 @@ function renderTags() {
     const container = document.getElementById('tagsList');
     
     if (categories.length === 0) {
-        container.innerHTML = '<p class="text-muted text-center py-4">Create categories first to add tags.</p>';
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-tags text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">Create categories first to add tags.</p>
+            </div>
+        `;
         return;
     }
 
-    let html = '';
     let hasAnyTags = false;
+    let html = '';
 
     categories.forEach(category => {
-        const tags = allTags[category.id] || [];
+        const tags = tagsByCategory[category.id] || [];
         if (tags.length > 0) {
             hasAnyTags = true;
             html += `
                 <div class="mb-4">
-                    <h6 class="text-primary"><i class="bi bi-folder-fill me-2"></i>${category.name}</h6>
+                    <h6 class="text-primary mb-3">
+                        <i class="bi bi-folder-fill me-2"></i>${escapeHtml(category.name)}
+                    </h6>
                     <div class="d-flex flex-wrap gap-2">
                         ${tags.map(tag => `
-                            <span class="badge bg-secondary p-2">
-                                ${tag.name}
-                                <button class="btn btn-sm btn-link text-white p-0 ms-1" onclick="deleteTag('${tag.id}')" style="text-decoration: none;">
-                                    <i class="bi bi-x-circle"></i>
+                            <span class="tag-badge">
+                                <i class="bi bi-tag-fill me-1"></i>${escapeHtml(tag.name)}
+                                <button class="btn-tag-delete" onclick="deleteTag('${tag.id}')" 
+                                        title="Delete tag">
+                                    <i class="bi bi-x-circle-fill"></i>
                                 </button>
                             </span>
                         `).join('')}
@@ -334,11 +400,20 @@ function renderTags() {
         }
     });
 
-    container.innerHTML = hasAnyTags ? html : '<p class="text-muted text-center py-4">No tags yet. Add tags to categories!</p>';
+    if (!hasAnyTags) {
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <i class="bi bi-tags text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3">No tags yet. Add tags to your categories!</p>
+            </div>
+        `;
+    } else {
+        container.innerHTML = html;
+    }
 }
 
 async function deleteTag(id) {
-    if (!confirm('Delete this tag?')) return;
+    if (!confirm('Delete this tag? It will be removed from all expenses.')) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
@@ -353,56 +428,75 @@ async function deleteTag(id) {
 
         await loadAllTags();
         await loadExpenses();
+        showNotification('Tag deleted successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to delete tag: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
-function updateTagSelects() {
-    const addContainer = document.getElementById('expenseTagsContainer');
-    const editContainer = document.getElementById('editExpenseTagsContainer');
+function updateTagSelections() {
+    updateTagsForExpense('addExpenseTagsList', []);
+}
+
+function updateTagsForExpense(containerId, currentTagIds = []) {
+    const container = document.getElementById(containerId);
     
-    let html = '';
     let hasAnyTags = false;
+    let html = '';
 
     categories.forEach(category => {
-        const tags = allTags[category.id] || [];
+        const tags = tagsByCategory[category.id] || [];
         if (tags.length > 0) {
             hasAnyTags = true;
-            html += `<div class="mb-2"><strong class="d-block text-muted small">${category.name}</strong>`;
-            tags.forEach(tag => {
-                html += `
-                    <div class="form-check">
-                        <input class="form-check-input tag-checkbox" type="checkbox" value="${tag.id}" id="tag-${tag.id}">
-                        <label class="form-check-label small" for="tag-${tag.id}">${tag.name}</label>
-                    </div>
-                `;
-            });
-            html += '</div>';
+            html += `
+                <div class="mb-3">
+                    <strong class="d-block text-muted mb-2">${escapeHtml(category.name)}</strong>
+                    ${tags.map(tag => {
+                        const isChecked = currentTagIds.includes(tag.id);
+                        const checkboxId = `${containerId}-tag-${tag.id}`;
+                        return `
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       value="${tag.id}" id="${checkboxId}" 
+                                       ${isChecked ? 'checked' : ''}>
+                                <label class="form-check-label" for="${checkboxId}">
+                                    ${escapeHtml(tag.name)}
+                                </label>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
         }
     });
 
     if (!hasAnyTags) {
-        html = '<p class="text-muted small mb-0">No tags available</p>';
+        container.innerHTML = '<p class="text-muted small mb-0">No tags available. Create tags in the Tags section.</p>';
+    } else {
+        container.innerHTML = html;
     }
-
-    addContainer.innerHTML = html;
 }
 
-// ========== EXPENSES ==========
-
+// ==================== EXPENSES ====================
 async function handleAddExpense() {
-    const name = document.getElementById('expenseName').value;
+    const name = document.getElementById('expenseName').value.trim();
     const price = parseFloat(document.getElementById('expensePrice').value);
     const categoryId = document.getElementById('expenseCategory').value;
 
     if (!categoryId) {
-        alert('Please select a category');
+        showNotification('Please select a category', 'warning');
         return;
     }
 
-    const selectedTags = Array.from(document.querySelectorAll('#expenseTagsContainer .tag-checkbox:checked'))
-        .map(cb => cb.value);
+    if (isNaN(price) || price < 0) {
+        showNotification('Please enter a valid price', 'warning');
+        return;
+    }
+
+    const selectedTagIds = Array.from(
+        document.querySelectorAll('#addExpenseTagsList input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
 
     try {
         // Create expense
@@ -415,16 +509,19 @@ async function handleAddExpense() {
             body: JSON.stringify({
                 name,
                 price,
-                category_id: categoryId
+                category_id: parseInt(categoryId)
             })
         });
 
-        if (!response.ok) throw new Error('Failed to create expense');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to create expense');
+        }
 
         const newExpense = await response.json();
 
         // Link tags to expense
-        for (const tagId of selectedTags) {
+        for (const tagId of selectedTagIds) {
             try {
                 await fetch(`${API_BASE_URL}/expense/${newExpense.id}/tag/${tagId}`, {
                     method: 'POST',
@@ -435,11 +532,16 @@ async function handleAddExpense() {
             }
         }
 
-        bootstrap.Modal.getInstance(document.getElementById('addExpenseModal')).hide();
+        // Close modal and refresh
+        const modal = bootstrap.Modal.getInstance(document.getElementById('addExpenseModal'));
+        modal.hide();
         document.getElementById('addExpenseForm').reset();
+        
         await loadExpenses();
+        showNotification('Expense added successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to add expense: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
@@ -449,11 +551,9 @@ function renderExpenses() {
     if (expenses.length === 0) {
         container.innerHTML = `
             <div class="col-12">
-                <div class="card">
-                    <div class="card-body text-center py-5">
-                        <i class="bi bi-receipt fs-1 text-muted"></i>
-                        <p class="text-muted mt-3">No expenses yet. Click "Add Expense" to get started!</p>
-                    </div>
+                <div class="text-center py-5">
+                    <i class="bi bi-receipt-cutoff text-muted" style="font-size: 4rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No expenses yet. Click "Add Expense" to get started!</p>
                 </div>
             </div>
         `;
@@ -461,33 +561,39 @@ function renderExpenses() {
     }
 
     container.innerHTML = expenses.map(expense => {
-        const category = categories.find(c => c.id === expense.category_id);
-        const tags = expense.tags || [];
+        const category = categories.find(c => c.id == expense.category_id);
+        const tags = expense.tag || [];
 
         return `
-            <div class="col-md-6 col-lg-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0">${expense.name}</h5>
-                            <span class="badge bg-success fs-6">$${parseFloat(expense.price).toFixed(2)}</span>
+            <div class="col-md-6 col-lg-4">
+                <div class="expense-card">
+                    <div class="expense-header">
+                        <h5 class="expense-title">${escapeHtml(expense.name)}</h5>
+                        <span class="expense-price">$${parseFloat(expense.price).toFixed(2)}</span>
+                    </div>
+                    <div class="expense-category">
+                        <i class="bi bi-folder-fill me-2"></i>
+                        ${category ? escapeHtml(category.name) : 'No Category'}
+                    </div>
+                    ${tags.length > 0 ? `
+                        <div class="expense-tags">
+                            ${tags.map(tag => `
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-tag-fill me-1"></i>${escapeHtml(tag.name)}
+                                </span>
+                            `).join('')}
                         </div>
-                        <p class="text-muted small mb-2">
-                            <i class="bi bi-folder me-1"></i>${category ? category.name : 'No Category'}
-                        </p>
-                        ${tags.length > 0 ? `
-                            <div class="mb-3">
-                                ${tags.map(tag => `<span class="badge bg-secondary me-1">${tag.name}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-primary flex-fill" onclick="editExpense('${expense.id}')">
-                                <i class="bi bi-pencil me-1"></i>Edit
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger flex-fill" onclick="deleteExpense('${expense.id}')">
-                                <i class="bi bi-trash me-1"></i>Delete
-                            </button>
-                        </div>
+                    ` : ''}
+                    <div class="expense-actions">
+                        <button class="btn btn-sm btn-outline-info" onclick="viewExpense('${expense.id}')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="editExpense('${expense.id}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteExpense('${expense.id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -495,8 +601,57 @@ function renderExpenses() {
     }).join('');
 }
 
+async function viewExpense(id) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/expense/${id}`, {
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load expense');
+        
+        const expense = await response.json();
+        const category = categories.find(c => c.id == expense.category_id);
+        const tags = expense.tag || [];
+        
+        const detailsHtml = `
+            <div class="expense-details">
+                <div class="detail-row">
+                    <strong>Name:</strong>
+                    <span>${escapeHtml(expense.name)}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Price:</strong>
+                    <span class="text-success fs-5">$${parseFloat(expense.price).toFixed(2)}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Category:</strong>
+                    <span><i class="bi bi-folder-fill text-primary me-2"></i>${category ? escapeHtml(category.name) : 'No Category'}</span>
+                </div>
+                ${tags.length > 0 ? `
+                    <div class="detail-row">
+                        <strong>Tags:</strong>
+                        <div class="mt-2">
+                            ${tags.map(tag => `
+                                <span class="badge bg-secondary me-1">
+                                    <i class="bi bi-tag-fill me-1"></i>${escapeHtml(tag.name)}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        document.getElementById('expenseDetails').innerHTML = detailsHtml;
+        new bootstrap.Modal(document.getElementById('viewExpenseModal')).show();
+        
+    } catch (error) {
+        showNotification('Failed to load expense details', 'danger');
+    }
+}
+
 function editExpense(id) {
-    const expense = expenses.find(e => e.id === id);
+    const expense = expenses.find(e => e.id == id);
     if (!expense) return;
 
     document.getElementById('editExpenseId').value = expense.id;
@@ -504,76 +659,34 @@ function editExpense(id) {
     document.getElementById('editExpensePrice').value = expense.price;
     document.getElementById('editExpenseCategory').value = expense.category_id || '';
 
-    // Render tags with current expense tags
-    const container = document.getElementById('editExpenseTagsContainer');
-    const expenseTagIds = (expense.tags || []).map(t => t.id);
-    
-    let html = '';
-    let hasAnyTags = false;
-
-    categories.forEach(category => {
-        const tags = allTags[category.id] || [];
-        if (tags.length > 0) {
-            hasAnyTags = true;
-            html += `<div class="mb-2"><strong class="d-block text-muted small">${category.name}</strong>`;
-            tags.forEach(tag => {
-                const isLinked = expenseTagIds.includes(tag.id);
-                html += `
-                    <div class="form-check d-flex justify-content-between align-items-center">
-                        <div>
-                            <input class="form-check-input" type="checkbox" ${isLinked ? 'checked' : ''} 
-                                   id="edit-tag-${tag.id}" data-tag-id="${tag.id}" 
-                                   onchange="toggleExpenseTag('${expense.id}', '${tag.id}', this.checked)">
-                            <label class="form-check-label small" for="edit-tag-${tag.id}">${tag.name}</label>
-                        </div>
-                        ${isLinked ? '<span class="badge bg-success small">Linked</span>' : ''}
-                    </div>
-                `;
-            });
-            html += '</div>';
-        }
-    });
-
-    if (!hasAnyTags) {
-        html = '<p class="text-muted small mb-0">No tags available</p>';
-    }
-
-    container.innerHTML = html;
+    const currentTagIds = (expense.tag || []).map(t => t.id);
+    updateTagsForExpense('editExpenseTagsList', currentTagIds);
 
     new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
 }
 
-async function toggleExpenseTag(expenseId, tagId, shouldLink) {
-    try {
-        const url = `${API_BASE_URL}/expense/${expenseId}/tag/${tagId}`;
-        const method = shouldLink ? 'POST' : 'DELETE';
-        
-        const response = await fetch(url, {
-            method,
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-
-        if (!response.ok) throw new Error('Failed to update tag');
-
-        await loadExpenses();
-    } catch (error) {
-        console.error('Error toggling tag:', error);
-        alert('Failed to update tag: ' + error.message);
-    }
-}
-
 async function handleUpdateExpense() {
     const id = document.getElementById('editExpenseId').value;
-    const name = document.getElementById('editExpenseName').value;
+    const name = document.getElementById('editExpenseName').value.trim();
     const price = parseFloat(document.getElementById('editExpensePrice').value);
     const categoryId = document.getElementById('editExpenseCategory').value;
 
     if (!categoryId) {
-        alert('Please select a category');
+        showNotification('Please select a category', 'warning');
         return;
     }
 
+    if (isNaN(price) || price < 0) {
+        showNotification('Please enter a valid price', 'warning');
+        return;
+    }
+
+    const selectedTagIds = Array.from(
+        document.querySelectorAll('#editExpenseTagsList input[type="checkbox"]:checked')
+    ).map(cb => cb.value);
+
     try {
+        // Update expense
         const response = await fetch(`${API_BASE_URL}/expense/${id}`, {
             method: 'PUT',
             headers: {
@@ -583,21 +696,61 @@ async function handleUpdateExpense() {
             body: JSON.stringify({
                 name,
                 price,
-                category_id: categoryId
+                category_id: parseInt(categoryId)
             })
         });
 
-        if (!response.ok) throw new Error('Failed to update expense');
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.message || 'Failed to update expense');
+        }
 
-        bootstrap.Modal.getInstance(document.getElementById('editExpenseModal')).hide();
+        // Manage tags
+        const expense = expenses.find(e => e.id == id);
+        const currentTagIds = (expense.tag || []).map(t => String(t.id));
+
+        // Remove tags that were unchecked
+        for (const tagId of currentTagIds) {
+            if (!selectedTagIds.includes(tagId)) {
+                try {
+                    await fetch(`${API_BASE_URL}/expense/${id}/tag/${tagId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (error) {
+                    console.error('Error removing tag:', error);
+                }
+            }
+        }
+
+        // Add new tags
+        for (const tagId of selectedTagIds) {
+            if (!currentTagIds.includes(tagId)) {
+                try {
+                    await fetch(`${API_BASE_URL}/expense/${id}/tag/${tagId}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (error) {
+                    console.error('Error adding tag:', error);
+                }
+            }
+        }
+
+        // Close modal and refresh
+        const modal = bootstrap.Modal.getInstance(document.getElementById('editExpenseModal'));
+        modal.hide();
+        
         await loadExpenses();
+        showNotification('Expense updated successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to update expense: ' + error.message);
+        showNotification(error.message, 'danger');
     }
 }
 
 async function deleteExpense(id) {
-    if (!confirm('Delete this expense?')) return;
+    if (!confirm('Delete this expense? This action cannot be undone.')) return;
 
     try {
         const response = await fetch(`${API_BASE_URL}/expense/${id}`, {
@@ -608,7 +761,35 @@ async function deleteExpense(id) {
         if (!response.ok) throw new Error('Failed to delete expense');
 
         await loadExpenses();
+        showNotification('Expense deleted successfully!', 'success');
+        
     } catch (error) {
-        alert('Failed to delete expense: ' + error.message);
+        showNotification(error.message, 'danger');
     }
+}
+
+// ==================== UTILITIES ====================
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+    notification.style.zIndex = '9999';
+    notification.style.minWidth = '300px';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
