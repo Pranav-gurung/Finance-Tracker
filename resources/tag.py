@@ -7,7 +7,7 @@ from models import TagModel , CategoryModel ,ExpenseModel
 from schemas import TagSchema ,TagAndExpenseSchema
 
 
-blp = Blueprint("Tag","tag",description="Operation on tags")
+blp = Blueprint("Tag","tag",description="Operation on tag")
 
 @blp.route("/category/<string:category_id>/tag")
 class TagsInCategory(MethodView):
@@ -15,7 +15,7 @@ class TagsInCategory(MethodView):
     def get(self, category_id):
         category = CategoryModel.query.get_or_404(category_id)
 
-        return category.tags.all()
+        return category.tag.all()
 
     @blp.arguments(TagSchema)
     @blp.response(201, TagSchema)
@@ -43,7 +43,7 @@ class LinkTagsToExpense(MethodView):
         expense = ExpenseModel.query.get_or_404(expense_id)
         tag = TagModel.query.get_or_404(tag_id)
 
-        expense.tags.append(tag)
+        expense.tag.append(tag)
 
         try:
             db.session.add(expense)
@@ -59,7 +59,7 @@ class LinkTagsToExpense(MethodView):
         expense = ExpenseModel.query.get_or_404(expense_id)
         tag = TagModel.query.get_or_404(tag_id)
 
-        expense.tags.remove(tag)
+        expense.tag.remove(tag)
 
         try:
             db.session.add(expense)
