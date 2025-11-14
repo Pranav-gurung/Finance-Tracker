@@ -1,5 +1,5 @@
 // Configuration - Replace with your actual API URL
-const API_BASE_URL = 'https://finance-tracker-vqwo.onrender.com';
+const API_BASE_URL = 'https://finance-tracker-mgo7.onrender.com';
 
 // ==================== STATE MANAGEMENT ====================
 let accessToken = null;
