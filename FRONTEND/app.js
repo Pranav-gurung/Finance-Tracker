@@ -547,8 +547,8 @@ async function handleAddExpense() {
 
 function renderExpenses() {
     const container = document.getElementById('expensesList');
-    
-    if (expenses.length === 0) {
+
+    if (!expenses || expenses.length === 0) {
         container.innerHTML = `
             <div class="col-12">
                 <div class="text-center py-5">
@@ -561,7 +561,12 @@ function renderExpenses() {
     }
 
     container.innerHTML = expenses.map(expense => {
+        // Find the category using type-safe comparison
         const category = categories.find(c => String(c.id) === String(expense.category_id));
+
+        // Fallback if no category found
+        const categoryName = category ? escapeHtml(category.name) : 'Miscellaneous';
+
         const tags = expense.tag || [];
 
         return `
@@ -573,14 +578,13 @@ function renderExpenses() {
                     </div>
 
                     <div class="expense-category">
-                        <i class="bi bi-folder-fill me-2"></i>
-                        ${category ? escapeHtml(category.name) : 'No Category'}
+                        <i class="bi bi-folder-fill me-2"></i>${categoryName}
                     </div>
 
                     <div class="mt-2">
                         ${
                             tags.length > 0
-                            ? tags.map(t => `<span class="badge bg-secondary me-1">${escapeHtml(t.name)}</span>`).join("")
+                            ? tags.map(t => `<span class="badge bg-secondary me-1">${escapeHtml(t.name)}</span>`).join('')
                             : "<small class='text-muted'>No tags</small>"
                         }
                     </div>
