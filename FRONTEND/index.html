@@ -18,11 +18,11 @@
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-5">
                 <div class="text-center mb-4">
-                    <div class="d-inline-block bg-success text-white p-3 rounded-3 mb-3">
+                    <div class="d-inline-block bg-primary text-white p-3 rounded-3 mb-3">
                         <i class="bi bi-wallet2 fs-1"></i>
                     </div>
                     <h1 class="mb-0">Finance Tracker</h1>
-                    <p class="text-muted">Manage your expenses efficiently</p>
+                    <p class="text-muted">Track your expenses efficiently</p>
                 </div>
 
                 <ul class="nav nav-pills nav-fill mb-3" role="tablist">
@@ -84,86 +84,59 @@
         </div>
     </div>
 
-    <!-- Dashboard Section -->
-    <div id="dashboardSection" class="d-none">
+    <!-- Main Application Section -->
+    <div id="appSection" class="d-none">
         <!-- Header -->
-        <nav class="navbar navbar-light bg-white border-bottom">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container-fluid">
-                <div class="d-flex align-items-center">
-                    <div class="bg-success text-white p-2 rounded me-3">
-                        <i class="bi bi-wallet2 fs-4"></i>
-                    </div>
-                    <div>
-                        <h5 class="mb-0">Finance Tracker</h5>
-                        <small class="text-muted">Manage your expenses efficiently</small>
-                    </div>
-                </div>
-                <button class="btn btn-outline-danger" id="logoutBtn">
+                <a class="navbar-brand" href="#">
+                    <i class="bi bi-wallet2 me-2"></i>Finance Tracker
+                </a>
+                <button class="btn btn-outline-light" id="logoutBtn">
                     <i class="bi bi-box-arrow-right me-2"></i>Logout
                 </button>
             </div>
         </nav>
 
         <div class="container-fluid py-4">
-            <!-- Stats Cards -->
-            <div class="row mb-4">
-                <div class="col-md-4 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="text-muted mb-2">Total Expenses</h6>
-                            <h3 class="text-success mb-0" id="totalExpenses">$0.00</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="text-muted mb-2">Categories</h6>
-                            <h3 class="mb-0" id="totalCategories">0</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="card">
-                        <div class="card-body">
-                            <h6 class="text-muted mb-2">Total Tags</h6>
-                            <h3 class="mb-0" id="totalTags">0</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabs -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses">Expenses</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories">Categories</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="tags-tab" data-bs-toggle="tab" data-bs-target="#tags">Tags</button>
-                    </li>
-                </ul>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                    <i class="bi bi-plus-circle me-2"></i>Add Expense
-                </button>
-            </div>
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expensesTab">
+                        <i class="bi bi-receipt me-2"></i>Expenses
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categoriesTab">
+                        <i class="bi bi-folder me-2"></i>Categories
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tags-tab" data-bs-toggle="tab" data-bs-target="#tagsTab">
+                        <i class="bi bi-tags me-2"></i>Tags
+                    </button>
+                </li>
+            </ul>
 
             <!-- Tab Content -->
             <div class="tab-content">
                 <!-- Expenses Tab -->
-                <div class="tab-pane fade show active" id="expenses">
-                    <div id="expensesList"></div>
+                <div class="tab-pane fade show active" id="expensesTab">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4>All Expenses</h4>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                            <i class="bi bi-plus-circle me-2"></i>Add Expense
+                        </button>
+                    </div>
+                    <div id="expensesList" class="row"></div>
                 </div>
 
                 <!-- Categories Tab -->
-                <div class="tab-pane fade" id="categories">
+                <div class="tab-pane fade" id="categoriesTab">
                     <div class="row">
-                        <div class="col-lg-6 mb-4">
+                        <div class="col-lg-4 mb-4">
                             <div class="card">
-                                <div class="card-header">
+                                <div class="card-header bg-primary text-white">
                                     <h5 class="mb-0">Add New Category</h5>
                                 </div>
                                 <div class="card-body">
@@ -179,10 +152,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-6">
+                        <div class="col-lg-8">
                             <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">All Categories (<span id="categoryCount">0</span>)</h5>
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">All Categories</h5>
                                 </div>
                                 <div class="card-body">
                                     <div id="categoriesList"></div>
@@ -193,24 +166,24 @@
                 </div>
 
                 <!-- Tags Tab -->
-                <div class="tab-pane fade" id="tags">
+                <div class="tab-pane fade" id="tagsTab">
                     <div class="row">
-                        <div class="col-lg-6 mb-4">
+                        <div class="col-lg-4 mb-4">
                             <div class="card">
-                                <div class="card-header">
+                                <div class="card-header bg-primary text-white">
                                     <h5 class="mb-0">Add New Tag</h5>
                                 </div>
                                 <div class="card-body">
                                     <form id="addTagForm">
                                         <div class="mb-3">
-                                            <label for="tagCategory" class="form-label">Category</label>
+                                            <label for="tagCategory" class="form-label">Select Category</label>
                                             <select class="form-select" id="tagCategory" required>
-                                                <option value="">Select a category</option>
+                                                <option value="">Choose a category...</option>
                                             </select>
                                         </div>
                                         <div class="mb-3">
                                             <label for="tagName" class="form-label">Tag Name</label>
-                                            <input type="text" class="form-control" id="tagName" placeholder="e.g., Urgent, Work" required>
+                                            <input type="text" class="form-control" id="tagName" placeholder="e.g., Urgent, Monthly" required>
                                         </div>
                                         <button type="submit" class="btn btn-primary w-100">
                                             <i class="bi bi-plus-circle me-2"></i>Add Tag
@@ -219,10 +192,10 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-lg-6">
+                        <div class="col-lg-8">
                             <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">All Tags by Category</h5>
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">Tags by Category</h5>
                                 </div>
                                 <div class="card-body">
                                     <div id="tagsList"></div>
@@ -246,12 +219,12 @@
                 <div class="modal-body">
                     <form id="addExpenseForm">
                         <div class="mb-3">
-                            <label for="expenseName" class="form-label">Expense Name</label>
-                            <input type="text" class="form-control" id="expenseName" required>
+                            <label for="expenseName" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="expenseName" placeholder="Expense description" required>
                         </div>
                         <div class="mb-3">
                             <label for="expensePrice" class="form-label">Price ($)</label>
-                            <input type="number" step="0.01" class="form-control" id="expensePrice" required>
+                            <input type="number" step="0.01" class="form-control" id="expensePrice" placeholder="0.00" required>
                         </div>
                         <div class="mb-3">
                             <label for="expenseCategory" class="form-label">Category</label>
@@ -261,7 +234,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Tags (Optional)</label>
-                            <div id="expenseTagsCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <div id="expenseTagsContainer" class="border rounded p-3" style="max-height: 150px; overflow-y: auto;">
+                                <p class="text-muted small mb-0">No tags available. Create tags in the Tags section.</p>
                             </div>
                         </div>
                     </form>
@@ -286,7 +260,7 @@
                     <form id="editExpenseForm">
                         <input type="hidden" id="editExpenseId">
                         <div class="mb-3">
-                            <label for="editExpenseName" class="form-label">Expense Name</label>
+                            <label for="editExpenseName" class="form-label">Name</label>
                             <input type="text" class="form-control" id="editExpenseName" required>
                         </div>
                         <div class="mb-3">
@@ -300,15 +274,15 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Tags</label>
-                            <div id="editExpenseTagsCheckboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <label class="form-label">Manage Tags</label>
+                            <div id="editExpenseTagsContainer" class="border rounded p-3" style="max-height: 150px; overflow-y: auto;">
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="updateExpenseBtn">Save Changes</button>
+                    <button type="button" class="btn btn-primary" id="updateExpenseBtn">Update Expense</button>
                 </div>
             </div>
         </div>
@@ -340,4 +314,3 @@
     <script src="app.js"></script>
 </body>
 </html>
-
