@@ -571,19 +571,24 @@ function renderExpenses() {
                         <h5 class="expense-title">${escapeHtml(expense.name)}</h5>
                         <span class="expense-price">$${parseFloat(expense.price).toFixed(2)}</span>
                     </div>
+
                     <div class="expense-category">
                         <i class="bi bi-folder-fill me-2"></i>
                         ${category ? escapeHtml(category.name) : 'No Category'}
                     </div>
-                    ${tags.length > 0 ? `
-                        <div class="expense-tags">
-                            ${tags.map(tag => `
-                                <span class="badge bg-secondary">
-                                    <i class="bi bi-tag-fill me-1"></i>${escapeHtml(tag.name)}
-                                </span>
-                            `).join('')}
-                        </div>
-                    ` : ''}
+
+                    <!-- ⭐ UPDATED TAG DISPLAY -->
+                    <div class="mt-2">
+                        ${
+                            tags.length > 0
+                            ? tags.map(t => `
+                                <span class="badge bg-secondary me-1">${escapeHtml(t.name)}</span>
+                              `).join("")
+                            : "<small class='text-muted'>No tags</small>"
+                        }
+                    </div>
+                    <!-- END TAG DISPLAY -->
+
                     <div class="expense-actions">
                         <button class="btn btn-sm btn-outline-info" onclick="viewExpense('${expense.id}')">
                             <i class="bi bi-eye"></i>
@@ -600,6 +605,7 @@ function renderExpenses() {
         `;
     }).join('');
 }
+
 
 async function viewExpense(id) {
     try {
